@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenFlow — a free AI API where limits belong to the model</title>
+<meta name="description" content="Free, OpenAI-compatible access to Groq, Mistral, Gemma and NVIDIA models. No tiers, no per-key quotas — every rate limit belongs to the model and is shared by everyone.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <h1 class="wordmark">Open<span>Flow</span></h1>
+  <nav>
+    <a href="#rig">Models</a>
+    <a href="#start">Get started</a>
+    <a href="dashboard.html">Dashboard</a>
+  </nav>
+</header>
+
+<main class="shell">
+
+  <h2 class="thesis">The limit isn't yours. It belongs to <em>the model</em>.</h2>
+  <p class="standfirst">
+    Every other API gives you a personal quota to burn through. OpenFlow gives
+    each model one bucket and everybody drinks from it. Your key says who you
+    are — it doesn't buy you a private allowance. Free, no tiers, no card.
+  </p>
+
+  <section class="rig" id="rig">
+    <div class="rig-head">
+      <p class="eyebrow" style="margin:0">Live capacity</p>
+      <p class="rig-state" id="rig-state" data-live="pending">
+        <span class="pip"></span><span id="rig-state-text">connecting</span>
+      </p>
+    </div>
+    <div id="rig-body">
+      <p class="note">Loading the model list…</p>
+    </div>
+  </section>
+
+  <section class="section" id="start">
+    <h2>Three steps to your first call</h2>
+    <ol class="steps">
+      <li>
+        <h3>Make an account</h3>
+        <p>Email and password. Signing up mints your owner ID, which every key
+          you create is tied to.</p>
+      </li>
+      <li>
+        <h3>Generate a key</h3>
+        <p>The dashboard shows it once. Copy it then — only its fingerprint is
+          stored, so it can't be shown again.</p>
+      </li>
+      <li>
+        <h3>Point your client here</h3>
+        <p>Anything that speaks the OpenAI chat format works. Swap the base URL
+          and the key, keep the rest.</p>
+      </li>
+    </ol>
+    <div class="row" style="margin-top:2rem">
+      <a href="dashboard.html"><button type="button">Create an account</button></a>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>It looks like every other chat API</h2>
+    <p>Because it is one. The only thing that changes is the base URL.</p>
+<pre><span class="c"># curl</span>
+curl <span class="k">$OPENFLOW_BASE</span>/v1/chat/completions \
+  -H <span class="k">"Authorization: Bearer of_live_your_key"</span> \
+  -H <span class="k">"Content-Type: application/json"</span> \
+  -d '{"model":"llama-3.3-70b","messages":[{"role":"user","content":"hi"}]}'
+
+<span class="c"># python, no SDK required</span>
+<span class="k">import</span> requests
+r = requests.post(
+    <span class="k">"$OPENFLOW_BASE/v1/chat/completions"</span>,
+    headers={<span class="k">"Authorization"</span>: <span class="k">"Bearer of_live_your_key"</span>},
+    json={<span class="k">"model"</span>: <span class="k">"kimi-k2"</span>,
+          <span class="k">"messages"</span>: [{<span class="k">"role"</span>: <span class="k">"user"</span>, <span class="k">"content"</span>: <span class="k">"hi"</span>}]},
+)
+print(r.json()[<span class="k">"choices"</span>][0][<span class="k">"message"</span>][<span class="k">"content"</span>])</pre>
+    <p class="note">
+      Streaming works — pass <code>"stream": true</code> and read the event
+      stream as usual.
+    </p>
+  </section>
+
+  <section class="section">
+    <h2>What happens when a model is full</h2>
+    <p>
+      Your request waits a few seconds for a slot. If none opens, you get a 429
+      naming the model, its limit, and how long until the next opening. That
+      isn't a penalty aimed at you — someone else was mid-call. Switch to a
+      model with room, or wait it out. The gauges above tell you which is which
+      before you send anything.
+    </p>
+  </section>
+
+</main>
+
+<footer>
+  <span>OpenFlow</span>
+  <span id="foot-endpoint">—</span>
+</footer>
+
+<script src="config.js"></script>
+<script>
+const API = window.OPENFLOW.api.replace(/\/+$/, "");
+document.getElementById("foot-endpoint").textContent = API.replace(/^https?:\/\//, "");
+
+const state = document.getElementById("rig-state");
+const stateText = document.getElementById("rig-state-text");
+const body = document.getElementById("rig-body");
+
+let built = false;
+
+function setState(kind, text) {
+  state.dataset.live = kind;
+  stateText.textContent = text;
+}
+
+function build(models) {
+  const groups = new Map();
+  for (const m of models) {
+    const label = m.provider_label || m.provider || "Other";
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(m);
+  }
+  body.innerHTML = "";
+  for (const [label, rows] of groups) {
+    const section = document.createElement("div");
+    section.className = "group";
+    const head = document.createElement("p");
+    head.className = "group-name";
+    head.textContent = label;
+    section.appendChild(head);
+    for (const m of rows) {
+      const gauge = document.createElement("div");
+      gauge.className = "gauge";
+      gauge.id = "gauge-" + m.id;
+      gauge.innerHTML =
+        '<span class="gauge-id"></span>' +
+        '<span class="gauge-limit"></span>' +
+        '<p class="gauge-blurb"></p>' +
+        '<div class="gauge-bar"><div class="gauge-fill"></div></div>';
+      gauge.querySelector(".gauge-id").textContent = m.id;
+      gauge.querySelector(".gauge-blurb").textContent = m.blurb || "";
+      section.appendChild(gauge);
+    }
+    body.appendChild(section);
+  }
+  built = true;
+}
+
+function paint(models) {
+  for (const m of models) {
+    const gauge = document.getElementById("gauge-" + m.id);
+    if (!gauge) continue;
+    const fill = gauge.querySelector(".gauge-fill");
+    const limit = gauge.querySelector(".gauge-limit");
+    if (m.configured === false) {
+      gauge.dataset.state = "offline";
+      limit.textContent = "offline";
+      continue;
+    }
+    if (m.limit === "unlimited") {
+      gauge.dataset.state = "unlimited";
+      fill.style.width = "100%";
+      limit.textContent = "unlimited";
+      continue;
+    }
+    gauge.dataset.state = "metered";
+    const share = m.capacity ? Math.max(0, m.available / m.capacity) : 1;
+    fill.style.width = (share * 100).toFixed(1) + "%";
+    gauge.dataset.pressure = share < 0.2 ? "high" : "normal";
+    limit.textContent = m.limit + " shared";
+  }
+}
+
+async function tick() {
+  try {
+    const res = await fetch(API + "/v1/status", { cache: "no-store" });
+    if (!res.ok) throw new Error(res.status);
+    const data = (await res.json()).data || [];
+    if (!built) build(data);
+    paint(data);
+    setState("yes", "live");
+  } catch (err) {
+    setState("no", "api offline — showing configured limits");
+    if (!built) {
+      body.innerHTML =
+        '<p class="note">The gateway isn\'t answering right now, so live ' +
+        'capacity is unavailable. Model list and limits appear here once it ' +
+        'comes back. Everything else on this page still applies.</p>';
+    }
+  }
+}
+
+tick();
+setInterval(tick, 4000);
+</script>
+</body>
+</html>

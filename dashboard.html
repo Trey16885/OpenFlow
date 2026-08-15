@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard — OpenFlow</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <h1 class="wordmark"><a href="index.html" style="color:inherit;text-decoration:none">Open<span>Flow</span></a></h1>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="#models">Models</a>
+    <a href="#" id="signout" hidden>Sign out</a>
+  </nav>
+</header>
+
+<main class="shell">
+
+  <!-- ---------------------------------------------------------- signed out -->
+  <section id="gate">
+    <h2 class="thesis" style="font-size:clamp(1.6rem,4.5vw,2.6rem)">
+      Your key, your <em>owner ID</em>.
+    </h2>
+    <p class="standfirst">
+      An account gets you an owner ID and as many keys as you want. It doesn't
+      get you a private rate limit — those stay with the models.
+    </p>
+
+    <div class="panel" style="max-width:26rem">
+      <div class="row spread">
+        <p class="eyebrow" id="gate-title" style="margin:0">Create an account</p>
+        <button class="ghost" type="button" id="gate-toggle">Have one already?</button>
+      </div>
+
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="email" placeholder="you@example.com">
+
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" placeholder="at least 6 characters">
+
+      <div class="row" style="margin-top:1.5rem">
+        <button type="button" id="gate-submit">Create account</button>
+      </div>
+
+      <p class="alert" id="gate-alert" hidden></p>
+    </div>
+  </section>
+
+  <!-- ----------------------------------------------------------- signed in -->
+  <section id="desk" hidden>
+
+    <div class="row spread" style="margin:3rem 0 0">
+      <div>
+        <p class="eyebrow" style="margin:0 0 0.35rem">Signed in as</p>
+        <p style="margin:0" id="who"></p>
+      </div>
+      <div style="text-align:right">
+        <p class="eyebrow" style="margin:0 0 0.35rem">Owner ID</p>
+        <p class="mono" style="margin:0;font-family:var(--data);font-size:0.85rem" id="owner">—</p>
+      </div>
+    </div>
+
+    <section class="section">
+      <h2>Keys</h2>
+      <p>Each key is shown once, at the moment you create it. Only a
+        fingerprint is stored here, so there's no way to recover it later —
+        make another one instead.</p>
+
+      <div class="panel" style="margin-top:1.75rem">
+        <div class="row">
+          <input id="label" placeholder="what's this key for?" style="flex:1;min-width:12rem">
+          <button type="button" id="mint">Generate key</button>
+        </div>
+
+        <div class="reveal" id="reveal" hidden>
+          <p class="eyebrow" style="margin:0 0 0.6rem">Copy this now</p>
+          <div id="reveal-key"></div>
+          <div class="row" style="margin-top:1rem">
+            <button class="ghost" type="button" id="copy">Copy</button>
+          </div>
+        </div>
+
+        <p class="alert" id="desk-alert" hidden></p>
+        <div class="keylist" id="keys"></div>
+      </div>
+    </section>
+
+    <section class="section" id="models">
+      <h2>Models you can call</h2>
+      <p>Every limit below is shared across all OpenFlow accounts. Pick by how
+        much room a model has, not by how much you've used.</p>
+      <div class="rig" style="margin-top:2rem">
+        <div id="rig-body"><p class="note">Loading…</p></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Base URL</h2>
+      <p>Point any OpenAI-compatible client at this and pass your key as the
+        bearer token.</p>
+<pre id="base-block"></pre>
+    </section>
+
+  </section>
+</main>
+
+<footer>
+  <span>OpenFlow</span>
+  <span>Dashboard</span>
+</footer>
+
+<script src="config.js"></script>
+<script>
+const CFG = window.OPENFLOW;
+const API = CFG.api.replace(/\/+$/, "");
+const SB = CFG.supabaseUrl.replace(/\/+$/, "");
+
+document.getElementById("base-block").textContent =
+  API + "/v1/chat/completions";
+
+/* ------------------------------------------------------------- tiny store */
+
+const store = {
+  read(k) { try { return localStorage.getItem(k); } catch (e) { return this._m?.[k] ?? null; } },
+  write(k, v) { try { localStorage.setItem(k, v); } catch (e) { (this._m ||= {})[k] = v; } },
+  drop(k) { try { localStorage.removeItem(k); } catch (e) { delete this._m?.[k]; } },
+};
+
+let session = null;
+try { session = JSON.parse(store.read("openflow.session") || "null"); } catch (e) {}
+
+function keep(s) {
+  session = s;
+  store.write("openflow.session", JSON.stringify(s));
+}
+
+function clear() {
+  session = null;
+  store.drop("openflow.session");
+}
+
+/* ------------------------------------------------------------- supabase io */
+
+async function sb(path, { method = "GET", body, auth = true, prefer } = {}) {
+  const headers = { apikey: CFG.supabaseKey, "Content-Type": "application/json" };
+  headers.Authorization = "Bearer " + (auth && session ? session.access_token : CFG.supabaseKey);
+  if (prefer) headers.Prefer = prefer;
+  const res = await fetch(SB + path, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) {
+    const msg = data?.msg || data?.message || data?.error_description ||
+                data?.hint || ("Supabase returned " + res.status);
+    throw new Error(msg);
+  }
+  return data;
+}
+
+/* ------------------------------------------------------------------- alerts */
+
+function say(id, message, good = false) {
+  const el = document.getElementById(id);
+  el.textContent = message;
+  el.classList.toggle("good", good);
+  el.hidden = !message;
+}
+
+/* --------------------------------------------------------------------- gate */
+
+let mode = "signup";
+const gateTitle = document.getElementById("gate-title");
+const gateToggle = document.getElementById("gate-toggle");
+const gateSubmit = document.getElementById("gate-submit");
+
+gateToggle.addEventListener("click", () => {
+  mode = mode === "signup" ? "login" : "signup";
+  gateTitle.textContent = mode === "signup" ? "Create an account" : "Sign in";
+  gateSubmit.textContent = mode === "signup" ? "Create account" : "Sign in";
+  gateToggle.textContent = mode === "signup" ? "Have one already?" : "Need an account?";
+  say("gate-alert", "");
+});
+
+gateSubmit.addEventListener("click", async () => {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  if (!email || !password) return say("gate-alert", "Enter an email and a password.");
+  if (password.length < 6) return say("gate-alert", "Passwords need at least 6 characters.");
+
+  gateSubmit.disabled = true;
+  try {
+    if (mode === "signup") {
+      const out = await sb("/auth/v1/signup", {
+        method: "POST", auth: false, body: { email, password },
+      });
+      if (!out.access_token) {
+        say("gate-alert",
+          "Account created. Supabase is set to confirm emails first — check " +
+          "your inbox, or turn confirmation off under Authentication → " +
+          "Providers → Email.");
+        gateSubmit.disabled = false;
+        return;
+      }
+      keep(out);
+    } else {
+      keep(await sb("/auth/v1/token?grant_type=password", {
+        method: "POST", auth: false, body: { email, password },
+      }));
+    }
+    await open();
+  } catch (err) {
+    say("gate-alert", err.message);
+  } finally {
+    gateSubmit.disabled = false;
+  }
+});
+
+/* --------------------------------------------------------------------- desk */
+
+let me = null;
+
+async function open() {
+  try {
+    me = await sb("/auth/v1/user");
+  } catch (err) {
+    clear();
+    return;
+  }
+  document.getElementById("gate").hidden = true;
+  document.getElementById("desk").hidden = false;
+  document.getElementById("signout").hidden = false;
+  document.getElementById("who").textContent = me.email;
+
+  const owners = await sb("/rest/v1/owners?select=owner_id&limit=1");
+  document.getElementById("owner").textContent =
+    owners?.[0]?.owner_id || "pending — run schema.sql";
+
+  await listKeys();
+  loadModels();
+}
+
+document.getElementById("signout").addEventListener("click", (e) => {
+  e.preventDefault();
+  clear();
+  location.reload();
+});
+
+/* --------------------------------------------------------------------- keys */
+
+async function sha256hex(text) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function mintKey() {
+  const raw = crypto.getRandomValues(new Uint8Array(32));
+  const b64 = btoa(String.fromCharCode(...raw))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return "of_live_" + b64;
+}
+
+document.getElementById("mint").addEventListener("click", async () => {
+  const button = document.getElementById("mint");
+  button.disabled = true;
+  say("desk-alert", "");
+  try {
+    const owners = await sb("/rest/v1/owners?select=owner_id&limit=1");
+    const ownerId = owners?.[0]?.owner_id;
+    if (!ownerId) throw new Error("No owner ID yet. Run schema.sql on your project.");
+
+    const key = mintKey();
+    const preview = key.slice(0, 16) + "…" + key.slice(-4);
+    await sb("/rest/v1/api_keys", {
+      method: "POST",
+      prefer: "return=minimal",
+      body: {
+        user_id: me.id,
+        owner_id: ownerId,
+        label: document.getElementById("label").value.trim() || "default",
+        key_hash: await sha256hex(key),
+        key_preview: preview,
+      },
+    });
+
+    document.getElementById("reveal-key").textContent = key;
+    document.getElementById("reveal").hidden = false;
+    document.getElementById("label").value = "";
+    document.getElementById("copy").onclick = () =>
+      navigator.clipboard.writeText(key).then(
+        () => say("desk-alert", "Key copied.", true),
+        () => say("desk-alert", "Copy failed — select it and copy manually."));
+    await listKeys();
+  } catch (err) {
+    say("desk-alert", err.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+async function listKeys() {
+  const rows = await sb(
+    "/rest/v1/api_keys?select=id,label,key_preview,revoked,created_at,last_used_at" +
+    "&order=created_at.desc");
+  const box = document.getElementById("keys");
+  box.innerHTML = "";
+  if (!rows.length) {
+    box.innerHTML = '<p class="note">No keys yet. Generate one above.</p>';
+    return;
+  }
+  for (const row of rows) {
+    const el = document.createElement("div");
+    el.className = "keyrow";
+    el.dataset.revoked = String(row.revoked);
+    const used = row.last_used_at
+      ? "last used " + new Date(row.last_used_at).toLocaleDateString()
+      : "never used";
+    el.innerHTML =
+      '<div><div class="mono"></div><div class="meta"></div></div>';
+    el.querySelector(".mono").textContent = row.key_preview;
+    el.querySelector(".meta").textContent =
+      row.label + " · " + used + (row.revoked ? " · revoked" : "");
+    if (!row.revoked) {
+      const kill = document.createElement("button");
+      kill.className = "ghost";
+      kill.type = "button";
+      kill.textContent = "Revoke";
+      kill.onclick = async () => {
+        kill.disabled = true;
+        try {
+          await sb("/rest/v1/api_keys?id=eq." + row.id, {
+            method: "PATCH", prefer: "return=minimal", body: { revoked: true },
+          });
+          await listKeys();
+        } catch (err) {
+          say("desk-alert", err.message);
+          kill.disabled = false;
+        }
+      };
+      el.appendChild(kill);
+    }
+    box.appendChild(el);
+  }
+}
+
+/* ------------------------------------------------------------------- models */
+
+async function loadModels() {
+  const body = document.getElementById("rig-body");
+  let rows;
+  try {
+    const res = await fetch(API + "/v1/status", { cache: "no-store" });
+    if (!res.ok) throw new Error(res.status);
+    rows = (await res.json()).data || [];
+  } catch (err) {
+    body.innerHTML = '<p class="note">The gateway isn\'t answering, so the ' +
+      'model list is unavailable. Your keys above still work the moment it ' +
+      'comes back.</p>';
+    return;
+  }
+
+  const groups = new Map();
+  for (const m of rows) {
+    const label = m.provider_label || m.provider;
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(m);
+  }
+
+  body.innerHTML = "";
+  for (const [label, items] of groups) {
+    const section = document.createElement("div");
+    section.className = "group";
+    const head = document.createElement("p");
+    head.className = "group-name";
+    head.textContent = label;
+    section.appendChild(head);
+    for (const m of items) {
+      const gauge = document.createElement("div");
+      gauge.className = "gauge";
+      const unlimited = m.limit === "unlimited";
+      const share = unlimited || !m.capacity ? 1 : Math.max(0, m.available / m.capacity);
+      gauge.dataset.state = m.configured === false ? "offline"
+                          : unlimited ? "unlimited" : "metered";
+      gauge.dataset.pressure = share < 0.2 ? "high" : "normal";
+      gauge.innerHTML =
+        '<span class="gauge-id"></span>' +
+        '<span class="gauge-limit"></span>' +
+        '<p class="gauge-blurb"></p>' +
+        '<div class="gauge-bar"><div class="gauge-fill"></div></div>';
+      gauge.querySelector(".gauge-id").textContent = m.id;
+      gauge.querySelector(".gauge-blurb").textContent = m.blurb || "";
+      gauge.querySelector(".gauge-limit").textContent =
+        m.configured === false ? "offline" : unlimited ? "unlimited" : m.limit + " shared";
+      gauge.querySelector(".gauge-fill").style.width = (share * 100).toFixed(1) + "%";
+      section.appendChild(gauge);
+    }
+    body.appendChild(section);
+  }
+}
+
+if (session) open();
+setInterval(() => { if (session && !document.getElementById("desk").hidden) loadModels(); }, 6000);
+</script>
+</body>
+</html>
