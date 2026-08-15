@@ -430,3 +430,19 @@ footer {
   .gauge { grid-template-columns: minmax(0, 1fr) 6rem; }
   .gauge-limit { font-size: 0.66rem; }
 }
+
+.endpoint {
+  margin: 1.25rem 0 0;
+  font-family: var(--data);
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.endpoint code {
+  background: var(--surface);
+  border: 1px solid var(--flow);
+  border-radius: 5px;
+  padding: 0.55rem 0.8rem;
+  display: inline-block;
+  color: var(--flow);
+}

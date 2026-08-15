@@ -4,12 +4,12 @@
 // only do what your row-level security policies allow, and the resolver
 // function hands back an owner ID and nothing else.
 //
-// Your four provider keys never appear here. They live inside the Worker.
+// Your four provider keys never appear here. They stay on your phone.
 
 window.OPENFLOW = {
-  // Your deployed Worker. Cloudflare shows this URL right after you hit
-  // Deploy — it looks like https://openflow.<your-subdomain>.workers.dev
-  api: "https://openflow.CHANGE-ME.workers.dev",
+  // The live tunnel. Change this one line if the URL ever moves — every
+  // sample on the site reads from here, so nothing else needs editing.
+  api: "https://api-openflow.serveousercontent.com",
 
   supabaseUrl: "https://lellmqmqxkbiypwqbcej.supabase.co",
   supabaseKey: "sb_publishable_a6hALlGUrAM3GtbyO86cKw_fC5l71ah",

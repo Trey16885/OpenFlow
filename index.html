@@ -65,9 +65,10 @@
 
   <section class="section">
     <h2>It looks like every other chat API</h2>
-    <p>Because it is one. The only thing that changes is the base URL.</p>
+    <p>Because it is one. The only thing that changes is the base URL:</p>
+    <p class="endpoint"><code class="base">https://api-openflow.serveousercontent.com</code></p>
 <pre><span class="c"># curl</span>
-curl <span class="k">$OPENFLOW_BASE</span>/v1/chat/completions \
+curl <span class="k"><span class="base">https://api-openflow.serveousercontent.com</span></span>/v1/chat/completions \
   -H <span class="k">"Authorization: Bearer of_live_your_key"</span> \
   -H <span class="k">"Content-Type: application/json"</span> \
   -d '{"model":"llama-3.3-70b","messages":[{"role":"user","content":"hi"}]}'
@@ -75,7 +76,7 @@ curl <span class="k">$OPENFLOW_BASE</span>/v1/chat/completions \
 <span class="c"># python, no SDK required</span>
 <span class="k">import</span> requests
 r = requests.post(
-    <span class="k">"$OPENFLOW_BASE/v1/chat/completions"</span>,
+    <span class="k">"<span class="base">https://api-openflow.serveousercontent.com</span>/v1/chat/completions"</span>,
     headers={<span class="k">"Authorization"</span>: <span class="k">"Bearer of_live_your_key"</span>},
     json={<span class="k">"model"</span>: <span class="k">"kimi-k2"</span>,
           <span class="k">"messages"</span>: [{<span class="k">"role"</span>: <span class="k">"user"</span>, <span class="k">"content"</span>: <span class="k">"hi"</span>}]},
@@ -197,6 +198,8 @@ async function tick() {
     }
   }
 }
+
+document.querySelectorAll(".base").forEach((el) => { el.textContent = API; });
 
 tick();
 setInterval(tick, 4000);
