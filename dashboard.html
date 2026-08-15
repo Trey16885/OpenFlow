@@ -288,6 +288,7 @@ async function open() {
   if (saved) document.getElementById("play-key").value = saved;
 
   await listKeys();
+  build();
   tick();
 }
 
@@ -413,19 +414,30 @@ async function listKeys() {
 
 /* ------------------------------------------------------------------- models */
 
+/* The roster comes from config.js and nothing else. The gateway is only ever
+   asked how full each bucket is — never which models exist. Regenerate the
+   list with: python3 sitemodels.py */
+const MODELS = (CFG.models || []).map((m) => ({
+  id: m.id,
+  provider_label: m.provider,
+  blurb: m.blurb,
+  limit: m.limit,
+  capacity: null,
+  available: null,
+}));
+
 const state = document.getElementById("rig-state");
 const stateText = document.getElementById("rig-state-text");
 const body = document.getElementById("rig-body");
 const sift = document.getElementById("sift");
 const picker = document.getElementById("play-model");
 
-let built = false;
-let latest = [];
+let live = new Map();
 
-function build(models) {
+function build() {
   const groups = new Map();
-  for (const m of models) {
-    const label = m.provider_label || m.provider || "Other";
+  for (const m of MODELS) {
+    const label = m.provider_label || "Other";
     if (!groups.has(label)) groups.set(label, []);
     groups.get(label).push(m);
   }
@@ -444,65 +456,74 @@ function build(models) {
       gauge.className = "gauge";
       gauge.id = "gauge-" + m.id;
       gauge.dataset.hay = (m.id + " " + label + " " + (m.blurb || "")).toLowerCase();
+      gauge.dataset.state = m.limit === "unlimited" ? "unlimited" : "idle";
       gauge.innerHTML =
         '<span class="gauge-id"></span><span class="gauge-limit"></span>' +
         '<p class="gauge-blurb"></p>' +
         '<div class="gauge-bar"><div class="gauge-fill"></div></div>';
       gauge.querySelector(".gauge-id").textContent = m.id;
       gauge.querySelector(".gauge-blurb").textContent = m.blurb || "";
+      gauge.querySelector(".gauge-limit").textContent =
+        m.limit === "unlimited" ? "unlimited" : m.limit + " shared";
       section.appendChild(gauge);
     }
     body.appendChild(section);
   }
 
-  const chosen = picker.value;
   picker.innerHTML = "";
-  for (const m of models) {
-    if (m.configured === false) continue;
+  for (const m of MODELS) {
     const option = document.createElement("option");
     option.value = m.id;
     option.textContent = m.id + "  —  " + m.limit;
     picker.appendChild(option);
   }
-  if (chosen) picker.value = chosen;
 
-  built = true;
+  count();
   applySift();
   refreshMeter();
 }
 
-function paint(models) {
-  for (const m of models) {
+function count(offline = 0) {
+  const providers = new Set(MODELS.map((m) => m.provider_label)).size;
+  document.getElementById("rig-count").textContent =
+    "· " + MODELS.length + " models · " + providers + " providers" +
+    (offline ? " · " + offline + " offline" : "");
+}
+
+/* Overlay live numbers onto models we already drew. Anything the gateway
+   reports that isn't in config.js is ignored. */
+function paint() {
+  let offline = 0;
+  for (const m of MODELS) {
     const gauge = document.getElementById("gauge-" + m.id);
     if (!gauge) continue;
     const fill = gauge.querySelector(".gauge-fill");
     const limit = gauge.querySelector(".gauge-limit");
+    const row = live.get(m.id);
 
-    if (m.configured === false) {
+    if (!row) { gauge.dataset.state = "idle"; continue; }
+
+    if (row.configured === false) {
       gauge.dataset.state = "offline";
       limit.textContent = "offline";
+      offline++;
+      const option = [...picker.options].find((o) => o.value === m.id);
+      if (option) option.disabled = true;
       continue;
     }
-    if (m.limit === "unlimited") {
+    if (row.limit === "unlimited" || !row.capacity) {
       gauge.dataset.state = "unlimited";
       fill.style.width = "100%";
       limit.textContent = "unlimited";
       continue;
     }
     gauge.dataset.state = "metered";
-    const share = m.capacity ? Math.max(0, m.available / m.capacity) : 1;
+    const share = Math.max(0, row.available / row.capacity);
     fill.style.width = (share * 100).toFixed(1) + "%";
     gauge.dataset.pressure = share < 0.2 ? "high" : "normal";
-    limit.textContent = m.limit + " shared";
+    limit.textContent = row.limit + " shared";
   }
-}
-
-function tally(models) {
-  const offline = models.filter((m) => m.configured === false).length;
-  const providers = new Set(models.map((m) => m.provider_label || m.provider)).size;
-  document.getElementById("rig-count").textContent =
-    "· " + models.length + " models · " + providers + " providers" +
-    (offline ? " · " + offline + " offline" : "");
+  count(offline);
 }
 
 function applySift() {
@@ -523,46 +544,50 @@ picker.addEventListener("change", refreshMeter);
 
 function refreshMeter() {
   const box = document.getElementById("play-meter");
-  const model = latest.find((m) => m.id === picker.value);
-  if (!model) { box.hidden = true; return; }
+  const listed = MODELS.find((m) => m.id === picker.value);
+  if (!listed) { box.hidden = true; return; }
   box.hidden = false;
 
   const fill = document.getElementById("play-fill");
-  document.getElementById("play-limit").textContent =
-    model.limit === "unlimited" ? "no limit on this one" : model.limit + " — shared by everyone";
+  const row = live.get(listed.id);
+  const label = document.getElementById("play-limit");
+  const left = document.getElementById("play-left");
 
-  if (model.limit === "unlimited" || !model.capacity) {
+  if (listed.limit === "unlimited") {
+    label.textContent = "no limit on this one";
     fill.style.width = "100%";
     fill.style.background = "var(--flow)";
-    document.getElementById("play-left").textContent = "";
+    left.textContent = "";
     return;
   }
-  const share = Math.max(0, model.available / model.capacity);
+
+  label.textContent = listed.limit + " — shared by everyone";
+
+  if (!row || !row.capacity) {
+    fill.style.width = "100%";
+    fill.style.background = "var(--line)";
+    left.textContent = "capacity unknown";
+    return;
+  }
+  const share = Math.max(0, row.available / row.capacity);
   fill.style.width = (share * 100).toFixed(1) + "%";
   fill.style.background = share < 0.2 ? "var(--surge)" : "var(--flow)";
-  document.getElementById("play-left").textContent =
-    Math.floor(model.available) + " of " + model.capacity + " free";
+  left.textContent = Math.floor(row.available) + " of " + row.capacity + " free";
 }
 
 async function tick() {
+  if (CFG.liveCapacity === false) return;
   try {
     const res = await fetch(API + "/v1/status", { cache: "no-store" });
     if (!res.ok) throw new Error(res.status);
-    latest = (await res.json()).data || [];
-    if (!built) build(latest);
-    paint(latest);
-    tally(latest);
+    live = new Map(((await res.json()).data || []).map((m) => [m.id, m]));
+    paint();
     refreshMeter();
     state.dataset.live = "yes";
     stateText.textContent = "live";
   } catch (err) {
     state.dataset.live = "no";
-    stateText.textContent = "gateway offline";
-    if (!built) {
-      body.innerHTML = '<p class="note">The gateway isn\'t answering, so the ' +
-        'model list is unavailable. Your keys still work the moment it returns.</p>';
-      picker.innerHTML = '<option>gateway offline</option>';
-    }
+    stateText.textContent = "gateway offline — showing configured limits";
   }
 }
 
@@ -654,7 +679,12 @@ sendBtn.addEventListener("click", async () => {
 
 /* ------------------------------------------------------------------- start */
 
+if (CFG.liveCapacity === false) {
+  document.getElementById("rig-state").hidden = true;
+}
+
 if (session) open();
+
 setInterval(() => {
   if (session && !document.getElementById("desk").hidden) tick();
 }, 5000);
