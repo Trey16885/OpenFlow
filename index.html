@@ -29,7 +29,7 @@
 
   <section class="rig" id="rig">
     <div class="rig-head">
-      <p class="eyebrow" style="margin:0">Live capacity</p>
+      <p class="eyebrow" style="margin:0">Live capacity <span id="rig-count"></span></p>
       <p class="rig-state" id="rig-state" data-live="pending">
         <span class="pip"></span><span id="rig-state-text">connecting</span>
       </p>
@@ -155,6 +155,14 @@ function build(models) {
   built = true;
 }
 
+function tally(models) {
+  const el = document.getElementById("rig-count");
+  const offline = models.filter((m) => m.configured === false).length;
+  const providers = new Set(models.map((m) => m.provider_label || m.provider)).size;
+  el.textContent = "· " + models.length + " models · " + providers + " providers" +
+                   (offline ? " · " + offline + " offline" : "");
+}
+
 function paint(models) {
   for (const m of models) {
     const gauge = document.getElementById("gauge-" + m.id);
@@ -187,6 +195,7 @@ async function tick() {
     const data = (await res.json()).data || [];
     if (!built) build(data);
     paint(data);
+    tally(data);
     setState("yes", "live");
   } catch (err) {
     setState("no", "api offline — showing configured limits");

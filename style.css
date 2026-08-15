@@ -141,6 +141,8 @@ a { color: var(--flow); text-decoration-thickness: 1px; text-underline-offset: 3
 .rig-state[data-live="yes"] .pip { background: var(--flow); }
 .rig-state[data-live="no"] .pip { background: var(--surge); }
 
+#rig-count { color: var(--line); letter-spacing: 0.1em; }
+
 .group { margin: 2rem 0 0; }
 
 .group-name {
