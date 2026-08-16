@@ -40,14 +40,25 @@
       <label for="email">Email</label>
       <input id="email" type="email" autocomplete="email" placeholder="you@example.com">
 
-      <label for="password">Password</label>
-      <input id="password" type="password" autocomplete="current-password" placeholder="at least 6 characters">
+      <div id="gate-password">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="at least 6 characters">
+      </div>
+
+      <div id="gate-ownerid" hidden>
+        <label for="ownerid">Owner ID</label>
+        <input id="ownerid" placeholder="own_…" autocomplete="off">
+      </div>
 
       <div class="row" style="margin-top:1.4rem">
         <button type="button" id="gate-submit">Create account</button>
       </div>
 
       <p class="alert" id="gate-alert" hidden></p>
+
+      <p class="secret" style="margin-top:1.1rem">
+        <button type="button" id="gate-mode">Forgot your password? Sign in with your owner ID</button>
+      </p>
     </div>
   </section>
 
@@ -193,7 +204,12 @@ let session = null;
 try { session = JSON.parse(store.get("openflow.session") || "null"); } catch (e) {}
 
 const keep = (s) => { session = s; store.set("openflow.session", JSON.stringify(s)); };
-const clear = () => { session = null; store.del("openflow.session"); };
+const clear = () => {
+  session = null;
+  AUTH.mode = AUTH.email = AUTH.ownerId = null;
+  store.del("openflow.session");
+  store.del("openflow.owner");
+};
 
 /* ------------------------------------------------------------- supabase io */
 
@@ -214,6 +230,34 @@ async function sb(path, { method = "GET", body, auth = true, prefer } = {}) {
   return data;
 }
 
+/* Whoever we are, the owner ID is what keys hang off. */
+async function ownerId() {
+  if (AUTH.mode === "owner") return AUTH.ownerId;
+  try {
+    const rows = await sb("/rest/v1/owners?select=owner_id&limit=1");
+    return rows?.[0]?.owner_id || "pending — run schema.sql";
+  } catch (err) {
+    return null;
+  }
+}
+
+/* Two ways in. "jwt" is the normal Supabase session. "owner" carries the
+   email and owner ID with every call instead, checked by security-definer
+   functions, because Supabase Auth can't mint a token for that pair. */
+const AUTH = { mode: null, email: null, ownerId: null };
+
+try {
+  const saved = JSON.parse(store.get("openflow.owner") || "null");
+  if (saved && saved.email && saved.ownerId) Object.assign(AUTH, saved, { mode: "owner" });
+} catch (e) {}
+
+function ownerArgs(extra = {}) {
+  return { p_email: AUTH.email, p_owner_id: AUTH.ownerId, ...extra };
+}
+
+const rpc = (fn, body) =>
+  sb("/rest/v1/rpc/" + fn, { method: "POST", auth: false, body });
+
 function say(id, message, good = false) {
   const el = document.getElementById(id);
   el.textContent = message;
@@ -228,6 +272,23 @@ const gateTitle = document.getElementById("gate-title");
 const gateToggle = document.getElementById("gate-toggle");
 const gateSubmit = document.getElementById("gate-submit");
 
+const gateMode = document.getElementById("gate-mode");
+let byOwner = false;
+
+gateMode.addEventListener("click", () => {
+  byOwner = !byOwner;
+  document.getElementById("gate-password").hidden = byOwner;
+  document.getElementById("gate-ownerid").hidden = !byOwner;
+  gateToggle.hidden = byOwner;
+  gateTitle.textContent = byOwner ? "Sign in with your owner ID" :
+                          (mode === "signup" ? "Create an account" : "Sign in");
+  gateSubmit.textContent = byOwner ? "Sign in" :
+                           (mode === "signup" ? "Create account" : "Sign in");
+  gateMode.textContent = byOwner ? "Use a password instead"
+                                 : "Forgot your password? Sign in with your owner ID";
+  say("gate-alert", "");
+});
+
 gateToggle.addEventListener("click", () => {
   mode = mode === "signup" ? "login" : "signup";
   gateTitle.textContent = mode === "signup" ? "Create an account" : "Sign in";
@@ -238,6 +299,29 @@ gateToggle.addEventListener("click", () => {
 
 gateSubmit.addEventListener("click", async () => {
   const email = document.getElementById("email").value.trim();
+
+  if (byOwner) {
+    const ownerId = document.getElementById("ownerid").value.trim();
+    if (!email || !ownerId) return say("gate-alert", "Enter both your email and your owner ID.");
+    gateSubmit.disabled = true;
+    try {
+      const out = await rpc("openflow_owner_login",
+                            { p_email: email, p_owner_id: ownerId });
+      const row = Array.isArray(out) ? out[0] : out;
+      if (!row || !row.ok) return say("gate-alert", row?.message || "That didn't work.");
+      AUTH.mode = "owner";
+      AUTH.email = row.email;
+      AUTH.ownerId = row.owner_id;
+      store.set("openflow.owner", JSON.stringify({ email: AUTH.email, ownerId: AUTH.ownerId }));
+      await open();
+    } catch (err) {
+      say("gate-alert", "Couldn't reach the account database.");
+    } finally {
+      gateSubmit.disabled = false;
+    }
+    return;
+  }
+
   const password = document.getElementById("password").value;
   if (!email || !password) return say("gate-alert", "Enter an email and a password.");
   if (password.length < 6) return say("gate-alert", "Passwords need at least 6 characters.");
@@ -272,11 +356,16 @@ gateSubmit.addEventListener("click", async () => {
 let me = null;
 
 async function open() {
-  try {
-    me = await sb("/auth/v1/user");
-  } catch (err) {
-    clear();
-    return;
+  if (AUTH.mode === "owner") {
+    me = { email: AUTH.email, id: null };
+  } else {
+    try {
+      me = await sb("/auth/v1/user");
+      AUTH.mode = "jwt";
+    } catch (err) {
+      clear();
+      return;
+    }
   }
 
   document.getElementById("gate").hidden = true;
@@ -286,13 +375,7 @@ async function open() {
   }
   document.getElementById("who").textContent = me.email;
 
-  try {
-    const owners = await sb("/rest/v1/owners?select=owner_id&limit=1");
-    document.getElementById("owner").textContent =
-      owners?.[0]?.owner_id || "pending — run schema.sql";
-  } catch (err) {
-    document.getElementById("owner").textContent = "unavailable";
-  }
+  document.getElementById("owner").textContent = await ownerId() || "unavailable";
 
   const saved = store.get("openflow.key");
   if (saved) document.getElementById("play-key").value = saved;
@@ -328,21 +411,27 @@ document.getElementById("mint").addEventListener("click", async () => {
   button.disabled = true;
   say("desk-alert", "");
   try {
-    const owners = await sb("/rest/v1/owners?select=owner_id&limit=1");
-    const ownerId = owners?.[0]?.owner_id;
-    if (!ownerId) throw new Error("No owner ID yet. Run schema.sql on your project.");
+    const owner = await ownerId();
+    if (!owner || owner.startsWith("pending")) {
+      throw new Error("No owner ID yet. Run schema.sql on your project.");
+    }
 
     const key = mintKey();
-    await sb("/rest/v1/api_keys", {
-      method: "POST", prefer: "return=minimal",
-      body: {
-        user_id: me.id,
-        owner_id: ownerId,
-        label: document.getElementById("label").value.trim() || "default",
-        key_hash: await sha256hex(key),
-        key_preview: key.slice(0, 16) + "…" + key.slice(-4),
-      },
-    });
+    const label = document.getElementById("label").value.trim() || "default";
+    const hash = await sha256hex(key);
+    const preview = key.slice(0, 16) + "…" + key.slice(-4);
+
+    if (AUTH.mode === "owner") {
+      const ok = await rpc("openflow_owner_new_key",
+        ownerArgs({ p_label: label, p_key_hash: hash, p_key_preview: preview }));
+      if (ok === false) throw new Error("Couldn't create the key.");
+    } else {
+      await sb("/rest/v1/api_keys", {
+        method: "POST", prefer: "return=minimal",
+        body: { user_id: me.id, owner_id: owner, label,
+                key_hash: hash, key_preview: preview },
+      });
+    }
 
     document.getElementById("reveal-key").textContent = key;
     document.getElementById("reveal").hidden = false;
@@ -372,8 +461,10 @@ async function listKeys() {
   const box = document.getElementById("keys");
   let rows;
   try {
-    rows = await sb("/rest/v1/api_keys?select=id,label,key_preview,revoked," +
-                    "created_at,last_used_at&order=created_at.desc");
+    rows = AUTH.mode === "owner"
+      ? await rpc("openflow_owner_keys", ownerArgs())
+      : await sb("/rest/v1/api_keys?select=id,label,key_preview,revoked," +
+                 "created_at,last_used_at&order=created_at.desc");
   } catch (err) {
     box.innerHTML = '<p class="note">Couldn\'t load your keys.</p>';
     return;
@@ -407,9 +498,13 @@ async function listKeys() {
       kill.onclick = async () => {
         kill.disabled = true;
         try {
-          await sb("/rest/v1/api_keys?id=eq." + row.id, {
-            method: "PATCH", prefer: "return=minimal", body: { revoked: true },
-          });
+          if (AUTH.mode === "owner") {
+            await rpc("openflow_owner_revoke", ownerArgs({ p_key_id: row.id }));
+          } else {
+            await sb("/rest/v1/api_keys?id=eq." + row.id, {
+              method: "PATCH", prefer: "return=minimal", body: { revoked: true },
+            });
+          }
           await listKeys();
           say("desk-alert", "Revoked. Takes up to a minute to take effect.", true);
         } catch (err) {
@@ -638,9 +733,9 @@ async function tryCode(value) {
 
   let out;
   try {
-    out = await sb("/rest/v1/rpc/openflow_redeem", {
-      method: "POST", body: { p_code: text },
-    });
+    out = AUTH.mode === "owner"
+      ? await rpc("openflow_owner_redeem", ownerArgs({ p_code: text }))
+      : await sb("/rest/v1/rpc/openflow_redeem", { method: "POST", body: { p_code: text } });
   } catch (err) {
     return false;
   }
@@ -661,7 +756,9 @@ async function tryCode(value) {
 
 async function showPerks() {
   try {
-    const rows = await sb("/rest/v1/rpc/openflow_my_perks", { method: "POST", body: {} });
+    const rows = AUTH.mode === "owner"
+      ? await rpc("openflow_owner_perks", ownerArgs())
+      : await sb("/rest/v1/rpc/openflow_my_perks", { method: "POST", body: {} });
     const perks = (rows || []).map((r) => r.perk);
     const box = document.getElementById("perk-badge");
     if (!box) return;
@@ -765,7 +862,7 @@ if (CFG.liveCapacity === false) {
   document.getElementById("rig-state").hidden = true;
 }
 
-if (session) open();
+if (session || AUTH.mode === "owner") open();
 
 setInterval(() => {
   if (session && !document.getElementById("desk").hidden) tick();
