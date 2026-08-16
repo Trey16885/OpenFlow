@@ -29,10 +29,13 @@ window.OPENFLOW = {
     { id: "google/diffusiongemma-26b-a4b-it", provider: "NVIDIA", limit: "20/m", blurb: "26B total, 4B active." },
     { id: "mistral-large-latest", provider: "Mistral", limit: "1/s", blurb: "Mistral's flagship. One call a second, each." },
     { id: "mistral-small-latest", provider: "Mistral", limit: "1/s", blurb: "Cheap and quick for everyday prompts." },
+    { id: "mistral-medium-latest", provider: "Mistral", limit: "1/s", blurb: "Between large and small." },
     { id: "gemma-4-31b-it", provider: "Google (Gemma)", limit: "30/m", blurb: "Gemma 4, 31B. This key serves Gemma only." },
     { id: "poolside/laguna-xs-2.1", provider: "Poolside", limit: "40/m", blurb: "Laguna XS, on Poolside's own endpoint — not sharing a key with anything else." },
     { id: "claude-haiku-4-5-20251001", provider: "ccproxy", limit: "20/m", blurb: "Haiku 4.5 via ccproxy. The only model exposed from that side." },
     { id: "google/google-paligemma", provider: "NVIDIA", limit: "30/m", blurb: "Sees images. Also the describer — send a picture to any text-only model here and this one writes what's in it first." },
+    { id: "treyleo16/llama4:31b", provider: "Ollama", limit: "6/m", blurb: "31B, running locally. Slow to answer, so requests queue rather than bounce." },
+    { id: "treyleo16/trai-4-zynr-super-lightweight", provider: "Ollama", limit: "60/m", blurb: "Lightweight local model. Quickest thing on the list." },
   ],
   // --- end models
 };
