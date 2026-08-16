@@ -31,6 +31,7 @@
   </p>
 
   <!-- ------------------------------------------------------------- gauges -->
+  <!-- The Nemotron rows can be talked out of their limit. Ask the console. -->
   <section class="rig" id="rig">
     <div class="rig-head">
       <p class="eyebrow" style="margin:0">Models <span id="rig-count"></span></p>
@@ -133,10 +134,14 @@ client = OpenAI(base_url=<span class="k">"<span class="base">…</span>/v1"</spa
   <span id="foot-endpoint">—</span>
 </footer>
 
-<script src="config.js?v=b330652d"></script>
+<script src="config.js?v=7a06dc4e"></script>
 <script>
 const CFG = window.OPENFLOW;
 const API = CFG.api.replace(/\/+$/, "");
+
+console.log("%cOpenFlow", "color:#2fd4b4;font-weight:700");
+console.log("Someone hid a code on this site.\n" +
+            "Start by filtering the models for a small orange fish.");
 
 document.querySelectorAll(".base").forEach((el) => { el.textContent = API; });
 document.getElementById("foot-endpoint").textContent = API.replace(/^https?:\/\//, "");
@@ -233,8 +238,31 @@ function paint(live) {
     (offline ? " · " + offline + " offline" : "");
 }
 
+/* Typing the fish's name turns up something that isn't a model. */
+const RIDDLE =
+  "Three words, run together, each one capitalised. " +
+  "What you'd call a small Nemotron, then what a Nemotron is, " +
+  "then what you shout when it works.";
+
+function riddle(show) {
+  let el = document.getElementById("riddle");
+  if (!show) { if (el) el.hidden = true; return; }
+  if (!el) {
+    el = document.createElement("p");
+    el.id = "riddle";
+    el.className = "note";
+    el.style.borderLeft = "2px solid var(--flow)";
+    el.style.paddingLeft = "0.85rem";
+    el.style.margin = "1.5rem 0 0";
+    el.textContent = RIDDLE;
+    body.appendChild(el);
+  }
+  el.hidden = false;
+}
+
 function applySift() {
   const needle = sift.value.trim().toLowerCase();
+  riddle(needle === "nemo");
   for (const group of body.querySelectorAll(".group")) {
     let shown = 0;
     for (const gauge of group.querySelectorAll(".gauge")) {

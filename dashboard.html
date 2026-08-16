@@ -62,6 +62,7 @@
       <div style="text-align:right">
         <p class="eyebrow" style="margin:0 0 0.3rem">Owner ID</p>
         <p class="stat" id="owner">—</p>
+        <p class="stat" id="perk-badge" style="color:var(--flow);font-size:0.7rem" hidden></p>
       </div>
     </div>
 
@@ -98,8 +99,10 @@
         allowance for that model — watch it dip as you use it, and refill.</p>
 
       <div class="panel" style="margin-top:1.6rem">
+        <!-- Keys start of_live_. Not everything you can paste here does. -->
         <label for="play-key">Your key</label>
         <input id="play-key" placeholder="of_live_…" autocomplete="off">
+        <p class="alert good" id="perk-note" hidden></p>
 
         <label for="play-model">Model</label>
         <select id="play-model"><option>loading…</option></select>
@@ -161,10 +164,14 @@
   <span id="foot-endpoint">—</span>
 </footer>
 
-<script src="config.js?v=b330652d"></script>
+<script src="config.js?v=7a06dc4e"></script>
 <script>
 const CFG = window.OPENFLOW;
 const API = CFG.api.replace(/\/+$/, "");
+
+console.log("%cOpenFlow", "color:#2fd4b4;font-weight:700");
+console.log("A code exists. The key field takes more than keys.\n" +
+            "Filter the models on the home page for a small orange fish.");
 const SB = CFG.supabaseUrl.replace(/\/+$/, "");
 
 document.getElementById("base-url").textContent = API + "/v1";
@@ -289,6 +296,7 @@ async function open() {
 
   await listKeys();
   build();
+  showPerks();
   tick();
 }
 
@@ -514,7 +522,7 @@ function paint() {
     if (row.limit === "unlimited" || !row.capacity) {
       gauge.dataset.state = "unlimited";
       fill.style.width = "100%";
-      limit.textContent = "unlimited";
+      limit.textContent = row.perk ? "unlimited · unlocked" : "unlimited";
       continue;
     }
     gauge.dataset.state = "metered";
@@ -610,8 +618,54 @@ async function tick() {
   }
 }
 
-/* Switching keys should refresh what the meters show. */
-document.getElementById("play-key").addEventListener("change", tick);
+/* Switching keys refreshes the meters — and anything that isn't a key gets
+   tried as a code first. */
+document.getElementById("play-key").addEventListener("change", async (e) => {
+  if (await tryCode(e.target.value)) return;
+  tick();
+});
+
+/* -------------------------------------------------------------------- perks */
+
+/* Anything pasted into the key field that isn't shaped like a key gets tried
+   as a code. Wrong guesses cost nothing — the function just says no. */
+async function tryCode(value) {
+  const text = (value || "").trim();
+  if (!text || text.startsWith("of_live_")) return false;
+
+  let out;
+  try {
+    out = await sb("/rest/v1/rpc/openflow_redeem", {
+      method: "POST", body: { p_code: text },
+    });
+  } catch (err) {
+    return false;
+  }
+
+  const row = Array.isArray(out) ? out[0] : out;
+  if (!row || !row.ok) return false;
+
+  const note = document.getElementById("perk-note");
+  note.textContent = "Unlocked: " + row.message +
+    "  ·  It's on your account, so every key you own has it.";
+  note.hidden = false;
+
+  document.getElementById("play-key").value = store.get("openflow.key") || "";
+  await showPerks();
+  tick();
+  return true;
+}
+
+async function showPerks() {
+  try {
+    const rows = await sb("/rest/v1/rpc/openflow_my_perks", { method: "POST", body: {} });
+    const perks = (rows || []).map((r) => r.perk);
+    const box = document.getElementById("perk-badge");
+    if (!box) return;
+    box.textContent = perks.length ? perks.join(" · ") : "";
+    box.hidden = perks.length === 0;
+  } catch (err) { /* older schema, no perks table yet */ }
+}
 
 /* --------------------------------------------------------------- playground */
 
@@ -635,6 +689,9 @@ sendBtn.addEventListener("click", async () => {
   reply.hidden = false;
   reply.dataset.state = "";
 
+  if (key && !key.startsWith("of_live_")) {
+    if (await tryCode(key)) { reply.hidden = true; return; }
+  }
   if (!key) { reply.dataset.state = "error"; reply.textContent = "Paste a key first — generate one above if you don't have it."; return; }
   if (!prompt) { reply.dataset.state = "error"; reply.textContent = "Write a prompt."; return; }
 
