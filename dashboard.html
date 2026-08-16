@@ -27,8 +27,8 @@
       Your key, your <em>owner ID</em>.
     </h2>
     <p class="standfirst">
-      An account gets you an owner ID and as many keys as you want. It doesn't
-      get you a private rate limit — those stay with the models.
+      An account gets you an owner ID, as many keys as you want, and your own
+      allowance on every model. Nobody else's traffic touches it.
     </p>
 
     <div class="panel" style="max-width:26rem">
@@ -94,8 +94,8 @@
     <!-- ------------------------------------------------------- playground -->
     <section class="section" id="play">
       <h2>Try it</h2>
-      <p>A real call through the gateway, from this page. Watch the model's
-        shared meter move as it runs — that's everyone's bucket, not yours.</p>
+      <p>A real call through the gateway, from this page. The meter is your own
+        allowance for that model — watch it dip as you use it, and refill.</p>
 
       <div class="panel" style="margin-top:1.6rem">
         <label for="play-key">Your key</label>
@@ -126,12 +126,12 @@
     <!-- ----------------------------------------------------------- models -->
     <section class="section" id="models">
       <h2>Models you can call</h2>
-      <p>Every limit below is shared across all OpenFlow accounts. Pick by how
-        much room a model has, not by how much you've used.</p>
+      <p>Every limit below is yours alone. Paste a key above and these fill in
+        with your own remaining headroom.</p>
 
       <div class="rig" style="margin-top:1.6rem">
         <div class="rig-head">
-          <p class="eyebrow" style="margin:0">Live capacity <span id="rig-count"></span></p>
+          <p class="eyebrow" style="margin:0">Your allowance <span id="rig-count"></span></p>
           <p class="rig-state" id="rig-state" data-live="pending">
             <span class="pip"></span><span id="rig-state-text">connecting</span>
           </p>
@@ -161,7 +161,7 @@
   <span id="foot-endpoint">—</span>
 </footer>
 
-<script src="config.js"></script>
+<script src="config.js?v=b330652d"></script>
 <script>
 const CFG = window.OPENFLOW;
 const API = CFG.api.replace(/\/+$/, "");
@@ -346,7 +346,7 @@ document.getElementById("mint").addEventListener("click", async () => {
       document.getElementById("play-key").value = key;
       store.set("openflow.key", key);
       document.getElementById("play").scrollIntoView({ block: "start" });
-      refreshMeter();
+      tick();
     };
 
     await listKeys();
@@ -464,7 +464,7 @@ function build() {
       gauge.querySelector(".gauge-id").textContent = m.id;
       gauge.querySelector(".gauge-blurb").textContent = m.blurb || "";
       gauge.querySelector(".gauge-limit").textContent =
-        m.limit === "unlimited" ? "unlimited" : m.limit + " shared";
+        m.limit === "unlimited" ? "unlimited" : m.limit + " per account";
       section.appendChild(gauge);
     }
     body.appendChild(section);
@@ -521,7 +521,7 @@ function paint() {
     const share = Math.max(0, row.available / row.capacity);
     fill.style.width = (share * 100).toFixed(1) + "%";
     gauge.dataset.pressure = share < 0.2 ? "high" : "normal";
-    limit.textContent = row.limit + " shared";
+    limit.textContent = Math.floor(row.available) + " of " + row.capacity + " left";
   }
   count(offline);
 }
@@ -561,35 +561,57 @@ function refreshMeter() {
     return;
   }
 
-  label.textContent = listed.limit + " — shared by everyone";
+  label.textContent = listed.limit + " — your own allowance";
 
   if (!row || !row.capacity) {
     fill.style.width = "100%";
     fill.style.background = "var(--line)";
-    left.textContent = "capacity unknown";
+    left.textContent = "paste a key to see yours";
     return;
   }
   const share = Math.max(0, row.available / row.capacity);
   fill.style.width = (share * 100).toFixed(1) + "%";
   fill.style.background = share < 0.2 ? "var(--surge)" : "var(--flow)";
-  left.textContent = Math.floor(row.available) + " of " + row.capacity + " free";
+  left.textContent = Math.floor(row.available) + " of " + row.capacity + " left";
 }
 
+/* With a key we ask /v1/me, which reports this account's own remaining
+   allowance. Without one we fall back to /v1/status, which is aggregate and
+   tells us only which models are actually being served. */
 async function tick() {
   if (CFG.liveCapacity === false) return;
+
+  const key = (document.getElementById("play-key").value || "").trim();
+  const mine = Boolean(key);
+  const url = API + (mine ? "/v1/me" : "/v1/status");
+  const headers = mine ? { Authorization: "Bearer " + key } : {};
+
   try {
-    const res = await fetch(API + "/v1/status", { cache: "no-store" });
-    if (!res.ok) throw new Error(res.status);
+    const res = await fetch(url, { cache: "no-store", headers });
+    if (!res.ok) {
+      if (mine && res.status === 401) {
+        state.dataset.live = "no";
+        stateText.textContent = "key not recognised";
+        live = new Map();
+        paint();
+        refreshMeter();
+        return;
+      }
+      throw new Error(res.status);
+    }
     live = new Map(((await res.json()).data || []).map((m) => [m.id, m]));
     paint();
     refreshMeter();
     state.dataset.live = "yes";
-    stateText.textContent = "live";
+    stateText.textContent = mine ? "your allowance, live" : "paste a key to see yours";
   } catch (err) {
     state.dataset.live = "no";
-    stateText.textContent = "gateway offline — showing configured limits";
+    stateText.textContent = "gateway offline — limits shown from config";
   }
 }
+
+/* Switching keys should refresh what the meters show. */
+document.getElementById("play-key").addEventListener("change", tick);
 
 /* --------------------------------------------------------------- playground */
 

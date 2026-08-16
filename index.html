@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OpenFlow — a free AI API where limits belong to the model</title>
-<meta name="description" content="Free, OpenAI-compatible access to models from Groq, Mistral, Google and NVIDIA. No tiers, no per-key quotas — every rate limit belongs to the model and is shared by everyone.">
+<meta name="description" content="Free, OpenAI-compatible access to models from NVIDIA, Mistral and Google. No tiers, no paid plans — every account gets the same allowance, and nobody else's traffic can spend it.">
 <meta name="color-scheme" content="dark">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -22,22 +22,27 @@
 
 <main class="shell">
 
-  <h2 class="thesis">The limit isn't yours. It belongs to <em>the model</em>.</h2>
+  <h2 class="thesis">Same limits for everyone. Nobody can spend <em>yours</em>.</h2>
   <p class="standfirst">
-    Every other API hands you a personal quota to burn through. OpenFlow gives
-    each model one bucket and everyone drinks from it. Your key says who you
-    are — it doesn't buy you a private allowance. Free, no tiers, no card.
+    Every account gets its own allowance on every model, and the numbers are
+    identical whoever you are. There's no paid tier to upgrade to, no busy
+    period where someone else's script eats your calls. Free, no card, just an
+    email and a password.
   </p>
 
   <!-- ------------------------------------------------------------- gauges -->
   <section class="rig" id="rig">
     <div class="rig-head">
-      <p class="eyebrow" style="margin:0">Live capacity <span id="rig-count"></span></p>
+      <p class="eyebrow" style="margin:0">Models <span id="rig-count"></span></p>
       <p class="rig-state" id="rig-state" data-live="pending">
         <span class="pip"></span><span id="rig-state-text">connecting</span>
       </p>
     </div>
     <input class="sift" id="sift" type="search" placeholder="filter models — try nemotron, or mistral" autocomplete="off">
+    <p class="note" style="margin:0.9rem 0 0">
+      Each figure is what <em>you</em> get, per account, refilling continuously.
+      Sign in to watch your own headroom move as you use it.
+    </p>
     <div id="rig-body"><p class="note">Loading the model list…</p></div>
   </section>
 
@@ -47,8 +52,8 @@
     <ol class="steps">
       <li>
         <h3>Make an account</h3>
-        <p>Email and password. Signing up mints your owner ID, which every key
-          you create belongs to.</p>
+        <p>Email and password. Signing up mints your owner ID — that's what
+          your allowance is tracked against.</p>
       </li>
       <li>
         <h3>Generate a key</h3>
@@ -101,19 +106,20 @@ client = OpenAI(base_url=<span class="k">"<span class="base">…</span>/v1"</spa
 
   <!-- --------------------------------------------------------------- full -->
   <section class="section">
-    <h2>What happens when a model is full</h2>
+    <h2>What happens when you run out</h2>
     <p>
-      Your request waits a few seconds for a slot. If none opens you get a 429
-      naming the model, its limit, and the seconds until the next opening. That
-      isn't a penalty aimed at you — someone else was mid-call. Switch to a
-      model with room or wait it out. The gauges above tell you which is which
-      before you send anything.
+      Your request waits a few seconds for your next slot. If none opens you
+      get a 429 naming the model, your limit, and the seconds until it refills.
+      Only your own calls count against it — the bucket is yours alone, so a
+      busy day for someone else never shows up in your logs. Wait it out or
+      move to another model; each one has its own separate allowance.
     </p>
 <pre>{
   <span class="k">"error"</span>: {
-    <span class="k">"message"</span>: <span class="k">"mistral-large-latest is at its shared limit of 1/s…"</span>,
+    <span class="k">"message"</span>: <span class="k">"You've used up your allowance on mistral-large-latest…"</span>,
     <span class="k">"type"</span>: <span class="k">"rate_limit_error"</span>,
     <span class="k">"model"</span>: <span class="k">"mistral-large-latest"</span>,
+    <span class="k">"scope"</span>: <span class="k">"per_account"</span>,
     <span class="k">"retry_after_s"</span>: 0.4
   }
 }</pre>
@@ -127,7 +133,7 @@ client = OpenAI(base_url=<span class="k">"<span class="base">…</span>/v1"</spa
   <span id="foot-endpoint">—</span>
 </footer>
 
-<script src="config.js"></script>
+<script src="config.js?v=b330652d"></script>
 <script>
 const CFG = window.OPENFLOW;
 const API = CFG.api.replace(/\/+$/, "");
@@ -175,16 +181,15 @@ function build() {
       gauge.className = "gauge";
       gauge.id = "gauge-" + m.id;
       gauge.dataset.hay = (m.id + " " + label + " " + (m.blurb || "")).toLowerCase();
-      gauge.dataset.state = m.limit === "unlimited" ? "unlimited" : "idle";
+      gauge.dataset.state = "listed";
       gauge.innerHTML =
         '<span class="gauge-id"></span>' +
         '<span class="gauge-limit"></span>' +
-        '<p class="gauge-blurb"></p>' +
-        '<div class="gauge-bar"><div class="gauge-fill"></div></div>';
+        '<p class="gauge-blurb"></p>';
       gauge.querySelector(".gauge-id").textContent = m.id;
       gauge.querySelector(".gauge-blurb").textContent = m.blurb || "";
       gauge.querySelector(".gauge-limit").textContent =
-        m.limit === "unlimited" ? "unlimited" : m.limit + " shared";
+        m.limit === "unlimited" ? "unlimited" : m.limit + " per account";
       section.appendChild(gauge);
     }
     body.appendChild(section);
@@ -199,6 +204,8 @@ function build() {
 
 /* Overlay live numbers onto models we already drew. Anything the gateway
    reports that isn't in config.js is ignored. */
+/* There is no capacity to show without a key — the limits are per account.
+   All the gateway tells us here is which models it is actually serving. */
 function paint(live) {
   const known = new Map(live.map((m) => [m.id, m]));
   let offline = 0;
@@ -206,31 +213,18 @@ function paint(live) {
   for (const m of MODELS) {
     const gauge = document.getElementById("gauge-" + m.id);
     if (!gauge) continue;
-    const fill = gauge.querySelector(".gauge-fill");
     const limit = gauge.querySelector(".gauge-limit");
     const row = known.get(m.id);
 
-    if (!row) {                                   // gateway doesn't serve it
-      gauge.dataset.state = "idle";
-      continue;
-    }
-    if (row.configured === false) {               // provider key missing
+    if (row && row.configured === false) {
       gauge.dataset.state = "offline";
       limit.textContent = "offline";
       offline++;
-      continue;
+    } else {
+      gauge.dataset.state = "listed";
+      limit.textContent =
+        m.limit === "unlimited" ? "unlimited" : m.limit + " per account";
     }
-    if (row.limit === "unlimited" || !row.capacity) {
-      gauge.dataset.state = "unlimited";
-      fill.style.width = "100%";
-      limit.textContent = "unlimited";
-      continue;
-    }
-    gauge.dataset.state = "metered";
-    const share = Math.max(0, row.available / row.capacity);
-    fill.style.width = (share * 100).toFixed(1) + "%";
-    gauge.dataset.pressure = share < 0.2 ? "high" : "normal";
-    limit.textContent = row.limit + " shared";
   }
 
   const providers = new Set(MODELS.map((m) => m.provider_label)).size;
@@ -263,7 +257,7 @@ async function tick() {
     stateText.textContent = "live";
   } catch (err) {
     state.dataset.live = "no";
-    stateText.textContent = "gateway offline — showing configured limits";
+    stateText.textContent = "gateway offline — limits shown from config";
   }
 }
 

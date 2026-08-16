@@ -231,6 +231,9 @@ a { color: var(--flow); text-underline-offset: 3px; }
 
 .gauge[data-state="idle"] .gauge-fill { background: var(--line); width: 100%; }
 
+/* The landing page lists limits without levels — no bar to draw there. */
+.gauge[data-state="listed"] .gauge-bar { display: none; }
+
 .gauge[data-state="offline"] .gauge-fill { background: var(--line); width: 100%; }
 .gauge[data-state="offline"] .gauge-id { color: var(--muted); }
 
