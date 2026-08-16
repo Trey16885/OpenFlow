@@ -475,3 +475,32 @@ footer a:hover { color: var(--text); }
   .gauge-limit { font-size: 0.64rem; }
   .sift { max-width: 100%; }
 }
+
+/* Easter-egg breadcrumbs. Quiet enough to ignore, loud enough to notice. */
+.secret {
+  font-family: var(--data);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 1.25rem 0 0;
+}
+
+.secret button {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: none;
+  color: var(--muted);
+  border-bottom: 1px dotted var(--line);
+  cursor: pointer;
+}
+
+.secret button:hover { color: var(--flow); border-bottom-color: var(--flow); }
+
+.secret a { color: var(--muted); text-decoration: none; border-bottom: 1px dotted var(--line); }
+.secret a:hover { color: var(--flow); border-bottom-color: var(--flow); }
+
+#riddle { font-family: var(--data); font-size: 0.7rem; line-height: 1.8; }

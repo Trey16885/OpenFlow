@@ -44,6 +44,10 @@
       Each figure is what <em>you</em> get, per account, refilling continuously.
       Sign in to watch your own headroom move as you use it.
     </p>
+    <p class="secret">
+      <button type="button" id="secret-1">Two models here can be talked out of their limit</button>
+      <span id="secret-2" hidden>Search the list for a small orange fish.</span>
+    </p>
     <div id="rig-body"><p class="note">Loading the model list…</p></div>
   </section>
 
@@ -132,6 +136,7 @@ client = OpenAI(base_url=<span class="k">"<span class="base">…</span>/v1"</spa
   <span>OpenFlow</span>
   <span><a href="dashboard.html">Dashboard</a></span>
   <span id="foot-endpoint">—</span>
+  <span class="secret"><a href="#rig">there's a code hidden here</a></span>
 </footer>
 
 <script src="config.js?v=7a06dc4e"></script>
@@ -275,6 +280,20 @@ function applySift() {
 }
 
 sift.addEventListener("input", applySift);
+
+/* Tap once to admit a secret exists, tap again for the first real lead. */
+const secret1 = document.getElementById("secret-1");
+const secret2 = document.getElementById("secret-2");
+secret1.addEventListener("click", () => {
+  if (secret2.hidden) {
+    secret2.hidden = false;
+    secret1.textContent = "Two models here can be talked out of their limit —";
+  } else {
+    sift.value = "nemo";
+    applySift();
+    sift.scrollIntoView({ block: "center" });
+  }
+});
 
 async function tick() {
   try {
