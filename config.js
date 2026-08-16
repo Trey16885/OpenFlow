@@ -30,6 +30,7 @@ window.OPENFLOW = {
     { id: "mistral-large-latest", provider: "Mistral", limit: "1/s", blurb: "Mistral's flagship. One call a second, each." },
     { id: "mistral-small-latest", provider: "Mistral", limit: "1/s", blurb: "Cheap and quick for everyday prompts." },
     { id: "gemma-4-31b-it", provider: "Google (Gemma)", limit: "30/m", blurb: "Gemma 4, 31B. This key serves Gemma only." },
+    { id: "poolside/laguna-xs-2.1", provider: "Poolside", limit: "40/m", blurb: "Laguna XS, on Poolside's own endpoint — not sharing a key with anything else." },
   ],
   // --- end models
 };
