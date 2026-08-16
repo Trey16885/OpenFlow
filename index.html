@@ -77,14 +77,14 @@
 curl <span class="k"><span class="base">…</span></span>/v1/chat/completions \
   -H <span class="k">"Authorization: Bearer of_live_your_key"</span> \
   -H <span class="k">"Content-Type: application/json"</span> \
-  -d '{"model":"mistral-small","messages":[{"role":"user","content":"hi"}]}'
+  -d '{"model":"mistral-small-latest","messages":[{"role":"user","content":"hi"}]}'
 
 <span class="c"># python — no SDK needed</span>
 <span class="k">import</span> requests
 r = requests.post(
     <span class="k">"<span class="base">…</span>/v1/chat/completions"</span>,
     headers={<span class="k">"Authorization"</span>: <span class="k">"Bearer of_live_your_key"</span>},
-    json={<span class="k">"model"</span>: <span class="k">"gpt-oss-20b"</span>,
+    json={<span class="k">"model"</span>: <span class="k">"openai/gpt-oss-20b"</span>,
           <span class="k">"messages"</span>: [{<span class="k">"role"</span>: <span class="k">"user"</span>, <span class="k">"content"</span>: <span class="k">"hi"</span>}]},
 )
 print(r.json()[<span class="k">"choices"</span>][0][<span class="k">"message"</span>][<span class="k">"content"</span>])
@@ -111,9 +111,9 @@ client = OpenAI(base_url=<span class="k">"<span class="base">…</span>/v1"</spa
     </p>
 <pre>{
   <span class="k">"error"</span>: {
-    <span class="k">"message"</span>: <span class="k">"mistral-large is at its shared limit of 1/s…"</span>,
+    <span class="k">"message"</span>: <span class="k">"mistral-large-latest is at its shared limit of 1/s…"</span>,
     <span class="k">"type"</span>: <span class="k">"rate_limit_error"</span>,
-    <span class="k">"model"</span>: <span class="k">"mistral-large"</span>,
+    <span class="k">"model"</span>: <span class="k">"mistral-large-latest"</span>,
     <span class="k">"retry_after_s"</span>: 0.4
   }
 }</pre>
