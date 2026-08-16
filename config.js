@@ -24,7 +24,6 @@ window.OPENFLOW = {
     { id: "minimaxai/minimax-m3", provider: "NVIDIA", limit: "10/m", blurb: "MiniMax M3." },
     { id: "nvidia/nemotron-3-ultra-550b-a55b", provider: "NVIDIA", limit: "6/m", blurb: "550B total, 55B active. The heaviest here — tightest allowance to match." },
     { id: "nvidia/nemotron-3-nano-30b-a3b", provider: "NVIDIA", limit: "30/m", blurb: "30B total, 3B active. The light end of the Nemotron 3 line." },
-    { id: "poolside/laguna-xs-2.1", provider: "NVIDIA", limit: "30/m", blurb: "Poolside Laguna XS." },
     { id: "openai/gpt-oss-120b", provider: "NVIDIA", limit: "20/m", blurb: "Open-weight, 120B." },
     { id: "openai/gpt-oss-20b", provider: "NVIDIA", limit: "30/m", blurb: "Open-weight, 20B. Quicker sibling of the 120B." },
     { id: "google/diffusiongemma-26b-a4b-it", provider: "NVIDIA", limit: "20/m", blurb: "26B total, 4B active." },
