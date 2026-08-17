@@ -35,6 +35,7 @@ window.OPENFLOW = {
     { id: "claude-haiku-4-5-20251001", provider: "ccproxy", limit: "20/m", blurb: "Haiku 4.5 via ccproxy. The only model exposed from that side." },
     { id: "google/google-paligemma", provider: "NVIDIA", limit: "30/m", blurb: "Sees images. Also the describer — send a picture to any text-only model here and this one writes what's in it first." },
     { id: "mistralai/mistral-nemotron", provider: "NVIDIA", limit: "20/m", blurb: "Mistral weights, NVIDIA's tuning." },
+    { id: "z-ai/glm-5.2", provider: "NVIDIA", limit: "30/m", blurb: "GLM 5.2 — 753B, 1M context. Free on NVIDIA's tier, which caps around 40/min." },
     { id: "treyleo16/llama4:31b", provider: "Ollama", limit: "6/m", blurb: "31B, running locally. Slow to answer, so requests queue rather than bounce." },
     { id: "treyleo16/trai-4-zynr-super-lightweight", provider: "Ollama", limit: "60/m", blurb: "Lightweight local model. Quickest thing on the list." },
     { id: "openrouter/free", provider: "OpenRouter", limit: "15/m", blurb: "OpenRouter's free routing. Their own daily cap sits above this one." },
