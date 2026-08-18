@@ -30,8 +30,6 @@ window.OPENFLOW = {
     { id: "mistral-large-latest", provider: "Mistral", limit: "1/s", blurb: "Mistral's flagship. One call a second, each." },
     { id: "mistral-small-latest", provider: "Mistral", limit: "1/s", blurb: "Cheap and quick for everyday prompts." },
     { id: "mistral-medium-latest", provider: "Mistral", limit: "1/s", blurb: "Between large and small." },
-    { id: "zai-glm-5-2", provider: "Mistral", limit: "1/s", blurb: "GLM 5.2, served by Mistral." },
-    { id: "glm-5-2", provider: "Mistral", limit: "1/s", blurb: "The other GLM 5.2 on Mistral. Try both — they may not be identical." },
     { id: "gemma-4-31b-it", provider: "Google (Gemma)", limit: "30/m", blurb: "Gemma 4, 31B. This key serves Gemma only." },
     { id: "poolside/laguna-xs-2.1", provider: "Poolside", limit: "40/m", blurb: "Laguna XS, on Poolside's own endpoint — not sharing a key with anything else." },
     { id: "claude-haiku-4-5-20251001", provider: "ccproxy", limit: "20/m", blurb: "Haiku 4.5 via ccproxy. The only model exposed from that side." },
@@ -40,6 +38,7 @@ window.OPENFLOW = {
     { id: "treyleo16/llama4:31b", provider: "Ollama", limit: "6/m", blurb: "31B, running locally. Slow to answer, so requests queue rather than bounce." },
     { id: "treyleo16/trai-4-zynr-super-lightweight", provider: "Ollama", limit: "60/m", blurb: "Lightweight local model. Quickest thing on the list." },
     { id: "openrouter/free", provider: "OpenRouter", limit: "15/m", blurb: "OpenRouter's free routing. Their own daily cap sits above this one." },
+    { id: "z-ai/glm-5.2:free", provider: "OpenRouter", limit: "10/m", blurb: "GLM 5.2 on OpenRouter's free tier. Their daily cap sits above this limit." },
     { id: "north-mini-code-1-0", provider: "Cohere", limit: "15/m", blurb: "Cohere North Mini, tuned for code." },
   ],
   // --- end models
