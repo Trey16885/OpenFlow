@@ -13,7 +13,9 @@
   <h1 class="wordmark"><a href="index.html">Open<span>Flow</span></a></h1>
   <nav>
     <a href="index.html">Home</a>
+    <a href="chat.html">Chat</a>
     <a href="#play" id="nav-play" hidden>Playground</a>
+    <a href="#pick" id="nav-pick" hidden>Free pick</a>
     <a href="#models" id="nav-models" hidden>Models</a>
     <a href="#" id="signout" hidden>Sign out</a>
   </nav>
@@ -103,6 +105,25 @@
       </div>
     </section>
 
+    <!-- -------------------------------------------------------- free pick -->
+    <section class="section" id="pick" hidden>
+      <h2>Your free pick</h2>
+      <p>One model, no limit, for as long as you want it. Change your mind
+        whenever — nothing is spent by switching.</p>
+
+      <div class="panel" style="margin-top:1.6rem">
+        <label for="pick-model">Unlimited model</label>
+        <select id="pick-model"><option value="">— none chosen —</option></select>
+
+        <div class="row" style="margin-top:1.1rem">
+          <button type="button" id="pick-save">Save</button>
+          <button type="button" class="ghost" id="pick-clear">Clear</button>
+        </div>
+
+        <p class="alert" id="pick-alert" hidden></p>
+      </div>
+    </section>
+
     <!-- ------------------------------------------------------- playground -->
     <section class="section" id="play">
       <h2>Try it</h2>
@@ -174,11 +195,12 @@
 
 <footer>
   <span>OpenFlow</span>
-  <span><a href="index.html">Home</a></span>
+  <span><a href="index.html">Home</a>
+    <a href="chat.html">Chat</a></span>
   <span id="foot-endpoint">—</span>
 </footer>
 
-<script src="config.js?v=3ec13bcc"></script>
+<script src="config.js?v=64811efc"></script>
 <script>
 const CFG = window.OPENFLOW;
 const API = CFG.api.replace(/\/+$/, "");
@@ -383,6 +405,7 @@ async function open() {
   await listKeys();
   build();
   showPerks();
+  loadPick();
   tick();
 }
 
@@ -620,7 +643,7 @@ function paint() {
     if (row.limit === "unlimited" || !row.capacity) {
       gauge.dataset.state = "unlimited";
       fill.style.width = "100%";
-      limit.textContent = row.perk ? "unlimited · unlocked" : "unlimited";
+      limit.textContent = row.perk ? "unlimited · yours" : "unlimited";
       continue;
     }
     gauge.dataset.state = "metered";
@@ -750,6 +773,7 @@ async function tryCode(value) {
 
   document.getElementById("play-key").value = store.get("openflow.key") || "";
   await showPerks();
+  await loadPick();
   tick();
   return true;
 }
@@ -766,6 +790,72 @@ async function showPerks() {
     box.hidden = perks.length === 0;
   } catch (err) { /* older schema, no perks table yet */ }
 }
+
+/* --------------------------------------------------------------- free pick */
+
+let blocked = new Set();
+
+async function loadPick() {
+  let row;
+  try {
+    if (AUTH.mode === "owner") {
+      const rows = await rpc("openflow_owner_pick", ownerArgs());
+      row = Array.isArray(rows) ? rows[0] : rows;
+    } else {
+      const rows = await sb("/rest/v1/rpc/openflow_my_pick", { method: "POST", body: {} });
+      row = Array.isArray(rows) ? rows[0] : rows;
+    }
+  } catch (err) {
+    return;                       // schema-freepick.sql not run yet
+  }
+
+  const has = Boolean(row && row.has_pick);
+  document.getElementById("pick").hidden = !has;
+  document.getElementById("nav-pick").hidden = !has;
+  if (!has) return;
+
+  try {
+    const rows = await sb("/rest/v1/pick_blocked?select=model", { auth: false });
+    blocked = new Set((rows || []).map((r) => r.model));
+  } catch (err) { /* fall back to letting the server refuse */ }
+
+  const picker = document.getElementById("pick-model");
+  picker.innerHTML = '<option value="">— none chosen —</option>';
+  for (const m of MODELS) {
+    if (blocked.has(m.id)) continue;          // server refuses these anyway
+    if (m.limit === "unlimited") continue;    // no point picking a free one
+    const option = document.createElement("option");
+    option.value = m.id;
+    option.textContent = m.id + "  (normally " + m.limit + ")";
+    picker.appendChild(option);
+  }
+  picker.value = row.unlimited_model || "";
+}
+
+async function savePick(model) {
+  const save = document.getElementById("pick-save");
+  const clear = document.getElementById("pick-clear");
+  save.disabled = clear.disabled = true;
+  try {
+    const out = AUTH.mode === "owner"
+      ? await rpc("openflow_owner_choose_unlimited", ownerArgs({ p_model: model }))
+      : await sb("/rest/v1/rpc/openflow_choose_unlimited",
+                 { method: "POST", body: { p_model: model } });
+    const row = Array.isArray(out) ? out[0] : out;
+    say("pick-alert", row?.message || "Saved.", Boolean(row?.ok));
+    if (row?.ok) document.getElementById("pick-model").value = row.model || "";
+    setTimeout(tick, 1500);       // the gateway caches key lookups for a minute
+  } catch (err) {
+    say("pick-alert", err.message);
+  } finally {
+    save.disabled = clear.disabled = false;
+  }
+}
+
+document.getElementById("pick-save").addEventListener("click",
+  () => savePick(document.getElementById("pick-model").value));
+document.getElementById("pick-clear").addEventListener("click",
+  () => savePick(""));
 
 /* --------------------------------------------------------------- playground */
 

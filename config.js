@@ -37,9 +37,8 @@ window.OPENFLOW = {
     { id: "mistralai/mistral-nemotron", provider: "NVIDIA", limit: "20/m", blurb: "Mistral weights, NVIDIA's tuning." },
     { id: "treyleo16/llama4:31b", provider: "Ollama", limit: "6/m", blurb: "31B, running locally. Slow to answer, so requests queue rather than bounce." },
     { id: "treyleo16/trai-4-zynr-super-lightweight", provider: "Ollama", limit: "60/m", blurb: "Lightweight local model. Quickest thing on the list." },
-    { id: "openrouter/free", provider: "OpenRouter", limit: "15/m", blurb: "OpenRouter's free routing. Their own daily cap sits above this one." },
-    { id: "z-ai/glm-5.2:free", provider: "OpenRouter", limit: "10/m", blurb: "GLM 5.2 on OpenRouter's free tier. Their daily cap sits above this limit." },
     { id: "north-mini-code-1-0", provider: "Cohere", limit: "15/m", blurb: "Cohere North Mini, tuned for code." },
+    { id: "z-ai/glm-4.7-flash-free", provider: "ZenMux", limit: "20/m", blurb: "GLM 4.7 Flash. Free on ZenMux, and a longer-lived free slot than the flagship models get." },
   ],
   // --- end models
 };
