@@ -24,8 +24,6 @@ window.OPENFLOW = {
     { id: "minimaxai/minimax-m3", provider: "NVIDIA", limit: "10/m", blurb: "MiniMax M3." },
     { id: "nvidia/nemotron-3-ultra-550b-a55b", provider: "NVIDIA", limit: "6/m", blurb: "550B total, 55B active. The heaviest here — tightest allowance to match." },
     { id: "nvidia/nemotron-3-nano-30b-a3b", provider: "NVIDIA", limit: "30/m", blurb: "30B total, 3B active. The light end of the Nemotron 3 line." },
-    { id: "openai/gpt-oss-120b", provider: "NVIDIA", limit: "20/m", blurb: "Open-weight, 120B." },
-    { id: "openai/gpt-oss-20b", provider: "NVIDIA", limit: "30/m", blurb: "Open-weight, 20B. Quicker sibling of the 120B." },
     { id: "google/diffusiongemma-26b-a4b-it", provider: "NVIDIA", limit: "20/m", blurb: "26B total, 4B active." },
     { id: "mistral-large-latest", provider: "Mistral", limit: "1/s", blurb: "Mistral's flagship. One call a second, each." },
     { id: "mistral-small-latest", provider: "Mistral", limit: "1/s", blurb: "Cheap and quick for everyday prompts." },
@@ -37,8 +35,9 @@ window.OPENFLOW = {
     { id: "mistralai/mistral-nemotron", provider: "NVIDIA", limit: "20/m", blurb: "Mistral weights, NVIDIA's tuning." },
     { id: "treyleo16/llama4:31b", provider: "Ollama", limit: "6/m", blurb: "31B, running locally. Slow to answer, so requests queue rather than bounce." },
     { id: "treyleo16/trai-4-zynr-super-lightweight", provider: "Ollama", limit: "60/m", blurb: "Lightweight local model. Quickest thing on the list." },
+    { id: "gpt-oss:120b-cloud", provider: "Ollama", limit: "10/m", blurb: "Open-weight 120B, run on Ollama Cloud rather than this machine." },
+    { id: "gpt-oss:20b-cloud", provider: "Ollama", limit: "20/m", blurb: "The 20B sibling. Quicker, still off-device." },
     { id: "north-mini-code-1-0", provider: "Cohere", limit: "15/m", blurb: "Cohere North Mini, tuned for code." },
-    { id: "z-ai/glm-4.7-flash-free", provider: "ZenMux", limit: "20/m", blurb: "GLM 4.7 Flash. Free on ZenMux, and a longer-lived free slot than the flagship models get." },
   ],
   // --- end models
 };
