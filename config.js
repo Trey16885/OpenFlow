@@ -38,6 +38,16 @@ window.OPENFLOW = {
     { id: "gpt-oss:120b-cloud", provider: "Ollama", limit: "10/m", blurb: "Open-weight 120B, run on Ollama Cloud rather than this machine." },
     { id: "gpt-oss:20b-cloud", provider: "Ollama", limit: "20/m", blurb: "The 20B sibling. Quicker, still off-device." },
     { id: "north-mini-code-1-0", provider: "Cohere", limit: "15/m", blurb: "Cohere North Mini, tuned for code." },
+    { id: "glm-5.2-free", provider: "AiHubMix", limit: "10/m", blurb: "GLM 5.2." },
+    { id: "coding-glm-5.2-free", provider: "AiHubMix", limit: "10/m", blurb: "GLM 5.2 tuned for code." },
+    { id: "coding-kimi-k3-free", provider: "AiHubMix", limit: "10/m", blurb: "Kimi K3 tuned for code." },
+    { id: "gemini-3.7-flash-free", provider: "AiHubMix", limit: "15/m", blurb: "Gemini 3.7 Flash. Sees images." },
+    { id: "gemini-3.6-flash-free", provider: "AiHubMix", limit: "15/m", blurb: "Gemini 3.6 Flash. Sees images." },
+    { id: "gemini-3.5-flash-lite-free", provider: "AiHubMix", limit: "30/m", blurb: "The lite tier — quickest of the Geminis." },
+    { id: "nemotron-3.5-lightning-free", provider: "AiHubMix", limit: "20/m", blurb: "NVIDIA's Lightning tier, built for speed." },
+    { id: "dots-3-note-preview-free", provider: "AiHubMix", limit: "10/m", blurb: "Preview build, so expect rough edges." },
+    { id: "lfm-2.5-2.6b-free", provider: "AiHubMix", limit: "40/m", blurb: "2.6B. Small and fast." },
+    { id: "north-mini-code-free", provider: "AiHubMix", limit: "20/m", blurb: "Cohere's North Mini for code, via AiHubMix." },
   ],
   // --- end models
 };
