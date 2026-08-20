@@ -141,7 +141,7 @@ client = OpenAI(base_url=<span class="k">"<span class="base">…</span>/v1"</spa
   <span class="secret"><a href="#rig">there's a code hidden here</a></span>
 </footer>
 
-<script src="config.js?v=0b1b6336"></script>
+<script src="config.js?v=2fc5e0d2"></script>
 <script>
 const CFG = window.OPENFLOW;
 const API = CFG.api.replace(/\/+$/, "");
@@ -161,6 +161,7 @@ const MODELS = (CFG.models || []).map((m) => ({
   provider_label: m.provider,
   blurb: m.blurb,
   limit: m.limit,
+  kind: m.kind || "chat",
   capacity: null,
   available: null,
 }));
@@ -201,7 +202,8 @@ function build() {
       gauge.querySelector(".gauge-id").textContent = m.id;
       gauge.querySelector(".gauge-blurb").textContent = m.blurb || "";
       gauge.querySelector(".gauge-limit").textContent =
-        m.limit === "unlimited" ? "unlimited" : m.limit + " per account";
+        (m.kind === "video" ? "video · " : "") +
+        (m.limit === "unlimited" ? "unlimited" : m.limit + " per account");
       section.appendChild(gauge);
     }
     body.appendChild(section);
@@ -235,7 +237,8 @@ function paint(live) {
     } else {
       gauge.dataset.state = "listed";
       limit.textContent =
-        m.limit === "unlimited" ? "unlimited" : m.limit + " per account";
+        (m.kind === "video" ? "video · " : "") +
+        (m.limit === "unlimited" ? "unlimited" : m.limit + " per account");
     }
   }
 

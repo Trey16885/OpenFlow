@@ -83,7 +83,7 @@
 
 </main>
 
-<script src="config.js?v=0b1b6336"></script>
+<script src="config.js?v=2fc5e0d2"></script>
 <script>
 const CFG = window.OPENFLOW;
 const API = CFG.api.replace(/\/+$/, "");
@@ -123,6 +123,7 @@ function fillModels() {
   const picker = $("model");
   picker.innerHTML = "";
   for (const m of MODELS) {
+    if ((m.kind || "chat") !== "chat") continue;   // video has its own endpoint
     const option = document.createElement("option");
     option.value = m.id;
     option.textContent = m.id + "  ·  " + m.limit;

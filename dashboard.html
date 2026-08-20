@@ -200,7 +200,7 @@
   <span id="foot-endpoint">—</span>
 </footer>
 
-<script src="config.js?v=0b1b6336"></script>
+<script src="config.js?v=2fc5e0d2"></script>
 <script>
 const CFG = window.OPENFLOW;
 const API = CFG.api.replace(/\/+$/, "");
@@ -551,6 +551,7 @@ const MODELS = (CFG.models || []).map((m) => ({
   provider_label: m.provider,
   blurb: m.blurb,
   limit: m.limit,
+  kind: m.kind || "chat",
   capacity: null,
   available: null,
 }));
@@ -593,7 +594,8 @@ function build() {
       gauge.querySelector(".gauge-id").textContent = m.id;
       gauge.querySelector(".gauge-blurb").textContent = m.blurb || "";
       gauge.querySelector(".gauge-limit").textContent =
-        m.limit === "unlimited" ? "unlimited" : m.limit + " per account";
+        (m.kind === "video" ? "video · " : "") +
+        (m.limit === "unlimited" ? "unlimited" : m.limit + " per account");
       section.appendChild(gauge);
     }
     body.appendChild(section);
@@ -601,6 +603,7 @@ function build() {
 
   picker.innerHTML = "";
   for (const m of MODELS) {
+    if (m.kind !== "chat") continue;   // video models answer elsewhere
     const option = document.createElement("option");
     option.value = m.id;
     option.textContent = m.id + "  —  " + m.limit;
@@ -823,6 +826,7 @@ async function loadPick() {
   picker.innerHTML = '<option value="">— none chosen —</option>';
   for (const m of MODELS) {
     if (blocked.has(m.id)) continue;          // server refuses these anyway
+    if (m.kind !== "chat") continue;          // only chat models are pickable
     if (m.limit === "unlimited") continue;    // no point picking a free one
     const option = document.createElement("option");
     option.value = m.id;
