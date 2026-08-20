@@ -46,6 +46,12 @@
 
     <label for="image">Image URL — required for image-to-video models</label>
     <input id="image" placeholder="https://…/still.jpg" autocomplete="off">
+    <p class="note" style="margin-top:0.55rem">
+      Need one? Upload your picture at
+      <a href="https://imghippo.com" target="_blank" rel="noopener">imghippo.com</a>
+      and paste the direct link. It has to be publicly reachable — the provider
+      fetches the image from its own servers, not from your phone.
+    </p>
 
     <div class="row" style="margin-top:0.9rem">
       <div>
@@ -261,7 +267,14 @@ $("go").addEventListener("click", async () => {
 
     if (!res.ok) {
       $("go").disabled = false;
-      say(row?.error?.message || ("HTTP " + res.status));
+      let message = row?.error?.message || ("HTTP " + res.status);
+      const detail = row?.error?.upstream_body || "";
+      if (/media|image|url|download|fetch/i.test(message + detail)) {
+        message += "  ·  If that's about the image, host it at imghippo.com " +
+                   "and use the direct link — some hosts block non-browser " +
+                   "clients from downloading.";
+      }
+      say(message);
       return;
     }
 
