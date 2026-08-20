@@ -44,10 +44,10 @@
     <label for="prompt">Prompt</label>
     <textarea id="prompt" rows="3" placeholder="A paper boat drifting down a rain gutter, close up, shallow depth of field"></textarea>
 
-    <label for="image">Image URL — required for image-to-video models</label>
+    <label for="image">Image URL — optional; leave empty for text-to-video</label>
     <input id="image" placeholder="https://…/still.jpg" autocomplete="off">
     <p class="note" style="margin-top:0.55rem">
-      Need one? Upload your picture at
+      Animating a still? Upload it at
       <a href="https://imghippo.com" target="_blank" rel="noopener">imghippo.com</a>
       and paste the direct link. It has to be publicly reachable — the provider
       fetches the image from its own servers, not from your phone.
@@ -132,7 +132,7 @@ curl <span class="k">"<span class="base">…</span>/v1/videos/tasks/TASK_ID?mode
   <span id="foot-endpoint">—</span>
 </footer>
 
-<script src="config.js?v=e0c23ff6"></script>
+<script src="config.js?v=53bbf6b9"></script>
 <script>
 const CFG = window.OPENFLOW;
 const API = CFG.api.replace(/\/+$/, "");
@@ -166,6 +166,7 @@ $("key").value = store.get("openflow.key") || "";
 
 function say(message, good = false) {
   const el = $("alert");
+  el.style.whiteSpace = "pre-wrap";
   el.textContent = message;
   el.classList.toggle("good", good);
   el.hidden = !message;
@@ -268,10 +269,22 @@ $("go").addEventListener("click", async () => {
     if (!res.ok) {
       $("go").disabled = false;
       let message = row?.error?.message || ("HTTP " + res.status);
-      const detail = row?.error?.upstream_body || "";
-      if (/media|image|url|download|fetch/i.test(message + detail)) {
-        message += "  ·  If that's about the image, host it at imghippo.com " +
-                   "and use the direct link — some hosts block non-browser " +
+
+      // The provider's own words are the useful part — show them, don't
+      // summarise them away.
+      let detail = row?.error?.upstream_body || "";
+      if (detail) {
+        try {
+          const parsed = JSON.parse(detail);
+          detail = parsed.message || parsed.error?.message ||
+                   [parsed.code, parsed.msg].filter(Boolean).join(": ") || detail;
+        } catch (e) { /* not JSON, show it raw */ }
+        message += "\n\n" + String(detail).slice(0, 600);
+      }
+
+      if (/media|image|url|download|fetch|oss/i.test(message)) {
+        message += "\n\nIf that's about the image: host it at imghippo.com " +
+                   "and use the direct link. Some hosts block non-browser " +
                    "clients from downloading.";
       }
       say(message);
