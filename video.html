@@ -44,14 +44,22 @@
     <label for="prompt">Prompt</label>
     <textarea id="prompt" rows="3" placeholder="A paper boat drifting down a rain gutter, close up, shallow depth of field"></textarea>
 
-    <label for="image">Image URL — optional; leave empty for text-to-video</label>
-    <input id="image" placeholder="https://…/still.jpg" autocomplete="off">
-    <p class="note" style="margin-top:0.55rem">
-      Animating a still? Upload it at
-      <a href="https://imghippo.com" target="_blank" rel="noopener">imghippo.com</a>
-      and paste the direct link. It has to be publicly reachable — the provider
-      fetches the image from its own servers, not from your phone.
+    <label for="file">Image — optional; leave empty for text-to-video</label>
+    <div class="row">
+      <input id="file" type="file" accept="image/*" class="grow">
+      <button class="ghost tiny" type="button" id="clear-image" hidden>Remove</button>
+    </div>
+    <p class="note" id="file-note" style="margin-top:0.55rem">
+      Pick a photo and it's held on the gateway for an hour so the provider can
+      fetch it — video services download the image from a public URL, they never
+      receive it from your phone. Nothing is kept afterwards.
     </p>
+
+    <details style="margin-top:0.7rem">
+      <summary class="secret" style="cursor:pointer">Or paste a URL instead</summary>
+      <input id="image" placeholder="https://…/still.jpg" autocomplete="off"
+             style="margin-top:0.6rem">
+    </details>
 
     <div class="row" style="margin-top:0.9rem">
       <div>
@@ -243,14 +251,38 @@ $("go").addEventListener("click", async () => {
   const key = $("key").value.trim();
   const model = $("model").value;
   const prompt = $("prompt").value.trim();
-  const image = $("image").value.trim();
-
   if (!key) return say("Paste your OpenFlow key first.");
   if (!prompt) return say("Write a prompt.");
 
   store.set("openflow.key", key);
   say("");
   $("go").disabled = true;
+
+  // A chosen file goes to the gateway first; it hands back a URL the
+  // provider can reach. A pasted URL is used as-is.
+  let image = $("image").value.trim();
+  const chosen = $("file").files && $("file").files[0];
+  if (chosen && !image) {
+    try {
+      say("uploading " + chosen.name + "…");
+      const res = await fetch(API + "/v1/uploads", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + key,
+                   "Content-Type": chosen.type || "image/jpeg" },
+        body: chosen,
+      });
+      const out = await res.json();
+      if (!res.ok) {
+        $("go").disabled = false;
+        return say(out?.error?.message || ("Upload failed: HTTP " + res.status));
+      }
+      image = out.url;
+      say("");
+    } catch (err) {
+      $("go").disabled = false;
+      return say("Couldn't upload that image: " + err.message);
+    }
+  }
 
   const body = { model, prompt };
   if (image) body.image = image;
@@ -283,8 +315,8 @@ $("go").addEventListener("click", async () => {
       }
 
       if (/media|image|url|download|fetch|oss/i.test(message)) {
-        message += "\n\nIf that's about the image: host it at imghippo.com " +
-                   "and use the direct link. Some hosts block non-browser " +
+        message += "\n\nIf that's about the image, try picking the file " +
+                   "instead of pasting a URL — some hosts block non-browser " +
                    "clients from downloading.";
       }
       say(message);
@@ -318,6 +350,23 @@ $("stop").addEventListener("click", () => {
   stopPolling();
   $("task-meta").textContent =
     "stopped polling — the job is still running, poll the task ID to check";
+});
+
+$("file").addEventListener("change", () => {
+  const chosen = $("file").files && $("file").files[0];
+  $("clear-image").hidden = !chosen;
+  if (chosen) {
+    $("file-note").textContent =
+      chosen.name + " — " + Math.round(chosen.size / 1024) + " KB, uploaded when you hit Generate";
+  }
+});
+
+$("clear-image").addEventListener("click", () => {
+  $("file").value = "";
+  $("clear-image").hidden = true;
+  $("file-note").textContent =
+    "Pick a photo and it's held on the gateway for an hour so the provider " +
+    "can fetch it. Nothing is kept afterwards.";
 });
 
 $("forget").addEventListener("click", () => {

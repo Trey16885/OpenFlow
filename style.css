@@ -338,6 +338,29 @@ input:focus, textarea:focus, select:focus { border-color: var(--flow); outline: 
 textarea { resize: vertical; min-height: 5.5rem; line-height: 1.65; font-family: var(--body); font-size: 0.95rem; }
 
 select { appearance: none; cursor: pointer; }
+
+input[type="file"] {
+  padding: 0.5rem;
+  font-family: var(--data);
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+input[type="file"]::file-selector-button {
+  font-family: var(--data);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--raised);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.4rem 0.7rem;
+  margin-right: 0.7rem;
+  cursor: pointer;
+}
+input[type="file"]::file-selector-button:hover { border-color: var(--flow); }
+
+details summary::-webkit-details-marker { color: var(--muted); }
 option { background: var(--surface); color: var(--text); }
 
 button {
