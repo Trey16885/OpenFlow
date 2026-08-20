@@ -53,7 +53,7 @@ window.OPENFLOW = {
     { id: "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B", provider: "Crusoe", limit: "10/m", kind: "chat", blurb: "120B total, 12B active." },
     { id: "Qwen/Qwen3-235B-A22B-Instruct-2507", provider: "Crusoe", limit: "8/m", kind: "chat", blurb: "235B total, 22B active. Biggest Qwen here." },
     { id: "yutori/n1.5", provider: "Crusoe", limit: "15/m", kind: "chat", blurb: "Yutori N1.5." },
-    { id: "wan2.7-i2v", provider: "Model Studio", limit: "5/m", kind: "video", blurb: "Wan 2.7. Give it a prompt on its own for text-to-video, or add an image URL to animate a still." },
+    { id: "wan2.7-t2v", provider: "Model Studio", limit: "5/m", kind: "video", blurb: "Wan 2.7 text-to-video. Describe the shot and it makes it." },
   ],
   // --- end models
 };
