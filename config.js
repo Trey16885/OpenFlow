@@ -32,7 +32,6 @@ window.OPENFLOW = {
     { id: "claude-haiku-4-5-20251001", provider: "ccproxy", limit: "20/m", kind: "chat", blurb: "Haiku 4.5 via ccproxy. The only model exposed from that side." },
     { id: "google/google-paligemma", provider: "NVIDIA", limit: "30/m", kind: "chat", blurb: "Sees images. Also the describer — send a picture to any text-only model here and this one writes what's in it first." },
     { id: "mistralai/mistral-nemotron", provider: "NVIDIA", limit: "20/m", kind: "chat", blurb: "Mistral weights, NVIDIA's tuning." },
-    { id: "nvidia/cosmos3-nano", provider: "NVIDIA", limit: "5/m", kind: "video", blurb: "Video generation. Call it at /v1/videos/generated with a prompt, not at /v1/chat/completions." },
     { id: "treyleo16/llama4:31b", provider: "Ollama", limit: "6/m", kind: "chat", blurb: "31B, running locally. Slow to answer, so requests queue rather than bounce." },
     { id: "treyleo16/trai-4-zynr-super-lightweight", provider: "Ollama", limit: "60/m", kind: "chat", blurb: "Lightweight local model. Quickest thing on the list." },
     { id: "gpt-oss:120b-cloud", provider: "Ollama", limit: "10/m", kind: "chat", blurb: "Open-weight 120B, run on Ollama Cloud rather than this machine." },
@@ -54,6 +53,7 @@ window.OPENFLOW = {
     { id: "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B", provider: "Crusoe", limit: "10/m", kind: "chat", blurb: "120B total, 12B active." },
     { id: "Qwen/Qwen3-235B-A22B-Instruct-2507", provider: "Crusoe", limit: "8/m", kind: "chat", blurb: "235B total, 22B active. Biggest Qwen here." },
     { id: "yutori/n1.5", provider: "Crusoe", limit: "15/m", kind: "chat", blurb: "Yutori N1.5." },
+    { id: "wan2.7-i2v", provider: "Model Studio", limit: "5/m", kind: "video", blurb: "Wan 2.7 image-to-video. Give it a prompt and an image URL." },
   ],
   // --- end models
 };

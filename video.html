@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Video — OpenFlow</title>
+<meta name="color-scheme" content="dark">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <h1 class="wordmark"><a href="index.html">Open<span>Flow</span></a></h1>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="chat.html">Chat</a>
+    <a href="dashboard.html">Dashboard</a>
+  </nav>
+</header>
+
+<main class="shell">
+
+  <h2 class="thesis" style="font-size:clamp(1.6rem,4.5vw,2.6rem)">
+    Video takes <em>minutes</em>, not seconds.
+  </h2>
+  <p class="standfirst">
+    Submitting starts a job on the provider's side and hands back a task ID.
+    This page polls it for you until the video is ready. Leave the tab open —
+    or note the ID and come back.
+  </p>
+
+  <div class="panel">
+    <div class="row">
+      <div class="grow">
+        <label for="key">Your key</label>
+        <input id="key" placeholder="of_live_…" autocomplete="off">
+      </div>
+      <div class="grow">
+        <label for="model">Model</label>
+        <select id="model"></select>
+      </div>
+    </div>
+
+    <label for="prompt">Prompt</label>
+    <textarea id="prompt" rows="3" placeholder="A paper boat drifting down a rain gutter, close up, shallow depth of field"></textarea>
+
+    <label for="image">Image URL — required for image-to-video models</label>
+    <input id="image" placeholder="https://…/still.jpg" autocomplete="off">
+
+    <div class="row" style="margin-top:0.9rem">
+      <div>
+        <label for="resolution" style="margin-top:0">Resolution</label>
+        <select id="resolution" style="width:8rem">
+          <option value="">default</option>
+          <option value="480P">480P</option>
+          <option value="720P">720P</option>
+          <option value="1080P">1080P</option>
+        </select>
+      </div>
+      <div>
+        <label for="duration" style="margin-top:0">Seconds</label>
+        <input id="duration" type="number" min="1" max="30" placeholder="default" style="width:7rem">
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:1.2rem">
+      <button type="button" id="go">Generate</button>
+      <button class="ghost" type="button" id="stop" hidden>Stop polling</button>
+      <button class="ghost tiny" type="button" id="forget">Forget key</button>
+    </div>
+
+    <p class="alert" id="alert" hidden></p>
+  </div>
+
+  <!-- ------------------------------------------------------------- job ---->
+  <section class="section" id="job" hidden>
+    <h2>Job</h2>
+
+    <div class="panel" style="margin-top:1.4rem">
+      <div class="row spread">
+        <div>
+          <p class="eyebrow" style="margin:0 0 0.3rem">Task</p>
+          <p class="stat" id="task-id">—</p>
+        </div>
+        <div style="text-align:right">
+          <p class="eyebrow" style="margin:0 0 0.3rem">Status</p>
+          <p class="stat" id="task-status">—</p>
+        </div>
+      </div>
+
+      <div class="gauge-bar" style="margin-top:1.1rem">
+        <div class="gauge-fill" id="task-bar" style="width:8%"></div>
+      </div>
+      <p class="meta" id="task-meta" style="margin-top:0.7rem"></p>
+
+      <video id="player" controls playsinline hidden></video>
+
+      <div class="row" style="margin-top:1rem" id="done-actions" hidden>
+        <a id="open-video" href="#" target="_blank" rel="noopener">
+          <button class="ghost tiny" type="button">Open in a new tab</button>
+        </a>
+        <button class="ghost tiny" type="button" id="copy-url">Copy URL</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Doing it yourself</h2>
+    <p>Two calls: submit, then poll until the status is <code>succeeded</code>.</p>
+<pre><span class="c"># submit — returns a task id</span>
+curl <span class="k">"<span class="base">…</span>/v1/videos/generated"</span> \
+  -H <span class="k">"Authorization: Bearer of_live_your_key"</span> \
+  -H <span class="k">"Content-Type: application/json"</span> \
+  -d '{"model":"wan2.7-i2v","prompt":"a paper boat","image":"https://…/still.jpg"}'
+
+<span class="c"># poll — same id, until status is succeeded</span>
+curl <span class="k">"<span class="base">…</span>/v1/videos/tasks/TASK_ID?model=wan2.7-i2v"</span> \
+  -H <span class="k">"Authorization: Bearer of_live_your_key"</span></pre>
+  </section>
+
+</main>
+
+<footer>
+  <span>OpenFlow</span>
+  <span><a href="chat.html">Chat</a></span>
+  <span id="foot-endpoint">—</span>
+</footer>
+
+<script src="config.js?v=e0c23ff6"></script>
+<script>
+const CFG = window.OPENFLOW;
+const API = CFG.api.replace(/\/+$/, "");
+const VIDEO = (CFG.models || []).filter((m) => m.kind === "video");
+
+document.querySelectorAll(".base").forEach((el) => { el.textContent = API; });
+document.getElementById("foot-endpoint").textContent = API.replace(/^https?:\/\//, "");
+
+const $ = (id) => document.getElementById(id);
+
+const store = {
+  _m: {},
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return this._m[k] ?? null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { this._m[k] = v; } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) { delete this._m[k]; } },
+};
+
+/* ---------------------------------------------------------------- models */
+
+for (const m of VIDEO) {
+  const option = document.createElement("option");
+  option.value = m.id;
+  option.textContent = m.id + "  ·  " + m.limit;
+  $("model").appendChild(option);
+}
+if (!VIDEO.length) {
+  $("model").innerHTML = "<option>no video models configured</option>";
+  $("go").disabled = true;
+}
+$("key").value = store.get("openflow.key") || "";
+
+function say(message, good = false) {
+  const el = $("alert");
+  el.textContent = message;
+  el.classList.toggle("good", good);
+  el.hidden = !message;
+}
+
+/* ------------------------------------------------------------------ poll */
+
+let timer = null;
+let began = 0;
+
+function stopPolling() {
+  if (timer) clearInterval(timer);
+  timer = null;
+  $("stop").hidden = true;
+  $("go").disabled = false;
+}
+
+/* No progress is reported by the provider, so the bar creeps toward 90% on a
+   curve — honest about being an estimate, and never claims to be finished. */
+function creep() {
+  const seconds = (Date.now() - began) / 1000;
+  const share = 8 + 82 * (1 - Math.exp(-seconds / 90));
+  $("task-bar").style.width = share.toFixed(1) + "%";
+  $("task-meta").textContent = "waiting " + Math.round(seconds) + "s";
+}
+
+function finish(row) {
+  stopPolling();
+  $("task-bar").style.width = "100%";
+  $("task-status").textContent = row.status;
+
+  if (row.status === "succeeded" && row.video_url) {
+    $("task-meta").textContent =
+      "ready after " + Math.round((Date.now() - began) / 1000) + "s";
+    const player = $("player");
+    player.src = row.video_url;
+    player.hidden = false;
+    $("open-video").href = row.video_url;
+    $("done-actions").hidden = false;
+    $("copy-url").onclick = () => navigator.clipboard.writeText(row.video_url);
+    say("Done.", true);
+  } else {
+    $("task-bar").style.background = "var(--surge)";
+    $("task-meta").textContent = row.error || "the job didn't produce a video";
+    say(row.error || "Generation failed.");
+  }
+}
+
+async function poll(taskId, model, key) {
+  try {
+    const res = await fetch(
+      API + "/v1/videos/tasks/" + encodeURIComponent(taskId) +
+      "?model=" + encodeURIComponent(model),
+      { headers: { Authorization: "Bearer " + key }, cache: "no-store" });
+    const row = await res.json();
+
+    if (!res.ok) {
+      finish({ status: "failed", error: row?.error?.message || ("HTTP " + res.status) });
+      return;
+    }
+    $("task-status").textContent = row.status;
+    if (["succeeded", "failed", "canceled"].includes(row.status)) {
+      finish(row);
+    }
+  } catch (err) {
+    // A blip while polling isn't fatal — the job carries on server-side.
+    $("task-meta").textContent = "lost contact, still trying…";
+  }
+}
+
+/* ---------------------------------------------------------------- submit */
+
+$("go").addEventListener("click", async () => {
+  const key = $("key").value.trim();
+  const model = $("model").value;
+  const prompt = $("prompt").value.trim();
+  const image = $("image").value.trim();
+
+  if (!key) return say("Paste your OpenFlow key first.");
+  if (!prompt) return say("Write a prompt.");
+
+  store.set("openflow.key", key);
+  say("");
+  $("go").disabled = true;
+
+  const body = { model, prompt };
+  if (image) body.image = image;
+  if ($("resolution").value) body.resolution = $("resolution").value;
+  const seconds = parseInt($("duration").value, 10);
+  if (!Number.isNaN(seconds) && seconds > 0) body.duration = seconds;
+
+  try {
+    const res = await fetch(API + "/v1/videos/generated", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const row = await res.json();
+
+    if (!res.ok) {
+      $("go").disabled = false;
+      say(row?.error?.message || ("HTTP " + res.status));
+      return;
+    }
+
+    $("job").hidden = false;
+    $("player").hidden = true;
+    $("done-actions").hidden = true;
+    $("task-bar").style.background = "var(--flow)";
+    $("task-id").textContent = row.id || "—";
+    $("task-status").textContent = row.status || "submitted";
+    began = Date.now();
+
+    if (row.status === "succeeded" && row.video_url) { finish(row); return; }
+    if (!row.id) { finish({ status: "failed", error: "no task id came back" }); return; }
+
+    $("stop").hidden = false;
+    creep();
+    timer = setInterval(() => {
+      creep();
+      poll(row.id, model, key);
+    }, 5000);
+  } catch (err) {
+    $("go").disabled = false;
+    say("Couldn't reach the gateway: " + err.message);
+  }
+});
+
+$("stop").addEventListener("click", () => {
+  stopPolling();
+  $("task-meta").textContent =
+    "stopped polling — the job is still running, poll the task ID to check";
+});
+
+$("forget").addEventListener("click", () => {
+  store.del("openflow.key");
+  $("key").value = "";
+  say("Key forgotten.", true);
+});
+</script>
+</body>
+</html>
