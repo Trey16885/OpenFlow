@@ -24,9 +24,9 @@
     Video takes <em>minutes</em>, not seconds.
   </h2>
   <p class="standfirst">
-    Submitting starts a job on the provider's side and hands back a task ID.
-    This page polls it for you until the video is ready. Leave the tab open —
-    or note the ID and come back.
+    Describe a shot and the provider makes it. Submitting starts a job and
+    hands back a task ID; this page polls until the video is ready. Leave the
+    tab open, or note the ID and come back.
   </p>
 
   <div class="panel">
@@ -43,23 +43,6 @@
 
     <label for="prompt">Prompt</label>
     <textarea id="prompt" rows="3" placeholder="A paper boat drifting down a rain gutter, close up, shallow depth of field"></textarea>
-
-    <label for="file">Image — optional; leave empty for text-to-video</label>
-    <div class="row">
-      <input id="file" type="file" accept="image/*" class="grow">
-      <button class="ghost tiny" type="button" id="clear-image" hidden>Remove</button>
-    </div>
-    <p class="note" id="file-note" style="margin-top:0.55rem">
-      Pick a photo and it's held on the gateway for an hour so the provider can
-      fetch it — video services download the image from a public URL, they never
-      receive it from your phone. Nothing is kept afterwards.
-    </p>
-
-    <details style="margin-top:0.7rem">
-      <summary class="secret" style="cursor:pointer">Or paste a URL instead</summary>
-      <input id="image" placeholder="https://…/still.jpg" autocomplete="off"
-             style="margin-top:0.6rem">
-    </details>
 
     <div class="row" style="margin-top:0.9rem">
       <div>
@@ -125,10 +108,10 @@
 curl <span class="k">"<span class="base">…</span>/v1/videos/generated"</span> \
   -H <span class="k">"Authorization: Bearer of_live_your_key"</span> \
   -H <span class="k">"Content-Type: application/json"</span> \
-  -d '{"model":"wan2.7-i2v","prompt":"a paper boat","image":"https://…/still.jpg"}'
+  -d '{"model":"wan2.7-t2v","prompt":"a paper boat"}'
 
 <span class="c"># poll — same id, until status is succeeded</span>
-curl <span class="k">"<span class="base">…</span>/v1/videos/tasks/TASK_ID?model=wan2.7-i2v"</span> \
+curl <span class="k">"<span class="base">…</span>/v1/videos/tasks/TASK_ID?model=wan2.7-t2v"</span> \
   -H <span class="k">"Authorization: Bearer of_live_your_key"</span></pre>
   </section>
 
@@ -140,7 +123,7 @@ curl <span class="k">"<span class="base">…</span>/v1/videos/tasks/TASK_ID?mode
   <span id="foot-endpoint">—</span>
 </footer>
 
-<script src="config.js?v=dcb1aa92"></script>
+<script src="config.js?v=9c873bbd"></script>
 <script>
 const CFG = window.OPENFLOW;
 const API = CFG.api.replace(/\/+$/, "");
@@ -258,34 +241,7 @@ $("go").addEventListener("click", async () => {
   say("");
   $("go").disabled = true;
 
-  // A chosen file goes to the gateway first; it hands back a URL the
-  // provider can reach. A pasted URL is used as-is.
-  let image = $("image").value.trim();
-  const chosen = $("file").files && $("file").files[0];
-  if (chosen && !image) {
-    try {
-      say("uploading " + chosen.name + "…");
-      const res = await fetch(API + "/v1/uploads", {
-        method: "POST",
-        headers: { Authorization: "Bearer " + key,
-                   "Content-Type": chosen.type || "image/jpeg" },
-        body: chosen,
-      });
-      const out = await res.json();
-      if (!res.ok) {
-        $("go").disabled = false;
-        return say(out?.error?.message || ("Upload failed: HTTP " + res.status));
-      }
-      image = out.url;
-      say("");
-    } catch (err) {
-      $("go").disabled = false;
-      return say("Couldn't upload that image: " + err.message);
-    }
-  }
-
   const body = { model, prompt };
-  if (image) body.image = image;
   if ($("resolution").value) body.resolution = $("resolution").value;
   const seconds = parseInt($("duration").value, 10);
   if (!Number.isNaN(seconds) && seconds > 0) body.duration = seconds;
@@ -314,11 +270,6 @@ $("go").addEventListener("click", async () => {
         message += "\n\n" + String(detail).slice(0, 600);
       }
 
-      if (/media|image|url|download|fetch|oss/i.test(message)) {
-        message += "\n\nIf that's about the image, try picking the file " +
-                   "instead of pasting a URL — some hosts block non-browser " +
-                   "clients from downloading.";
-      }
       say(message);
       return;
     }
@@ -350,23 +301,6 @@ $("stop").addEventListener("click", () => {
   stopPolling();
   $("task-meta").textContent =
     "stopped polling — the job is still running, poll the task ID to check";
-});
-
-$("file").addEventListener("change", () => {
-  const chosen = $("file").files && $("file").files[0];
-  $("clear-image").hidden = !chosen;
-  if (chosen) {
-    $("file-note").textContent =
-      chosen.name + " — " + Math.round(chosen.size / 1024) + " KB, uploaded when you hit Generate";
-  }
-});
-
-$("clear-image").addEventListener("click", () => {
-  $("file").value = "";
-  $("clear-image").hidden = true;
-  $("file-note").textContent =
-    "Pick a photo and it's held on the gateway for an hour so the provider " +
-    "can fetch it. Nothing is kept afterwards.";
 });
 
 $("forget").addEventListener("click", () => {
