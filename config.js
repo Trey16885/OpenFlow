@@ -63,9 +63,6 @@ window.OPENFLOW = {
     { id: "sonar:free", provider: "NagaAI", limit: "10/m", kind: "chat", blurb: "Perplexity Sonar — answers with live web search." },
     { id: "flux-1-schnell:free", provider: "NagaAI", limit: "10/m", kind: "image", blurb: "FLUX.1 schnell. Fast image generation." },
     { id: "dall-e-3:free", provider: "NagaAI", limit: "5/m", kind: "image", blurb: "DALL-E 3." },
-    { id: "gemini-2.5-flash-lite", provider: "LLM7", limit: "5/m", kind: "chat", blurb: "Gemini 2.5 Flash Lite." },
-    { id: "claude-3-haiku-20240307", provider: "LLM7", limit: "5/m", kind: "chat", blurb: "Claude 3 Haiku." },
-    { id: "gpt-4o-mini-2024-07-18", provider: "LLM7", limit: "5/m", kind: "chat", blurb: "GPT-4o mini." },
   ],
   // --- end models
 };
