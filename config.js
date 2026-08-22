@@ -42,6 +42,7 @@ window.OPENFLOW = {
     { id: "YuriiFominYoung/fable-5", provider: "Ollama", limit: "10/m", kind: "chat", blurb: "Fable 5." },
     { id: "treyleo16/opus-5", provider: "Ollama", limit: "10/m", kind: "chat", blurb: "Opus 5, one of yours." },
     { id: "north-mini-code-1-0", provider: "Cohere", limit: "15/m", kind: "chat", blurb: "Cohere North Mini, tuned for code." },
+    { id: "command-r", provider: "Cohere", limit: "15/m", kind: "chat", blurb: "Cohere Command R." },
     { id: "zai/GLM-5.1", provider: "Crusoe", limit: "10/m", kind: "chat", blurb: "GLM 5.1." },
     { id: "zai/GLM-5.2", provider: "Crusoe", limit: "10/m", kind: "chat", blurb: "GLM 5.2." },
     { id: "deepseek-ai/Deepseek-V4-Flash", provider: "Crusoe", limit: "20/m", kind: "chat", blurb: "DeepSeek V4, flash tier." },
@@ -57,6 +58,14 @@ window.OPENFLOW = {
     { id: "Qwen/Qwen3-235B-A22B-Instruct-2507", provider: "Crusoe", limit: "8/m", kind: "chat", blurb: "235B total, 22B active. Biggest Qwen here." },
     { id: "yutori/n1.5", provider: "Crusoe", limit: "15/m", kind: "chat", blurb: "Yutori N1.5." },
     { id: "wan2.7-t2v", provider: "Model Studio", limit: "5/m", kind: "video", blurb: "Wan 2.7 text-to-video. Describe the shot and it makes it." },
+    { id: "llama-4-scout-17b-16e-instruct:free", provider: "NagaAI", limit: "15/m", kind: "chat", blurb: "Llama 4 Scout, 17B with 16 experts." },
+    { id: "llama-3.3-70b-instruct:free", provider: "NagaAI", limit: "15/m", kind: "chat", blurb: "Llama 3.3 70B." },
+    { id: "sonar:free", provider: "NagaAI", limit: "10/m", kind: "chat", blurb: "Perplexity Sonar — answers with live web search." },
+    { id: "flux-1-schnell:free", provider: "NagaAI", limit: "10/m", kind: "image", blurb: "FLUX.1 schnell. Fast image generation." },
+    { id: "dall-e-3:free", provider: "NagaAI", limit: "5/m", kind: "image", blurb: "DALL-E 3." },
+    { id: "gemini-2.5-flash-lite", provider: "LLM7", limit: "5/m", kind: "chat", blurb: "Gemini 2.5 Flash Lite." },
+    { id: "claude-3-haiku-20240307", provider: "LLM7", limit: "5/m", kind: "chat", blurb: "Claude 3 Haiku." },
+    { id: "gpt-4o-mini-2024-07-18", provider: "LLM7", limit: "5/m", kind: "chat", blurb: "GPT-4o mini." },
   ],
   // --- end models
 };
