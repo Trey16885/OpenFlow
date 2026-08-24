@@ -53,7 +53,6 @@ window.OPENFLOW = {
     { id: "treyleo16/muse-code", provider: "Ollama", limit: "20/m", kind: "chat", blurb: "Muse, tuned for code." },
     { id: "treyleo16/freeform", provider: "Ollama", limit: "20/m", kind: "chat", blurb: "Freeform — 31B, built by OpenFlow. The house model." },
     { id: "north-mini-code-1-0", provider: "Cohere", limit: "15/m", kind: "chat", blurb: "Cohere North Mini, tuned for code." },
-    { id: "command-r", provider: "Cohere", limit: "15/m", kind: "chat", blurb: "Cohere Command R." },
     { id: "zai/GLM-5.1", provider: "Crusoe", limit: "10/m", kind: "chat", blurb: "GLM 5.1." },
     { id: "zai/GLM-5.2", provider: "Crusoe", limit: "10/m", kind: "chat", blurb: "GLM 5.2." },
     { id: "deepseek-ai/Deepseek-V4-Flash", provider: "Crusoe", limit: "20/m", kind: "chat", blurb: "DeepSeek V4, flash tier." },
