@@ -13,9 +13,7 @@
   <h1 class="wordmark"><a href="index.html">Open<span>Flow</span></a></h1>
   <nav>
     <a href="index.html">Home</a>
-    <a href="chat.html">Chat</a>
     <a href="video.html">Video</a>
-    <a href="#play" id="nav-play" hidden>Playground</a>
     <a href="#pick" id="nav-pick" hidden>Free pick</a>
     <a href="#models" id="nav-models" hidden>Models</a>
     <a href="#" id="signout" hidden>Sign out</a>
@@ -97,7 +95,7 @@
           <div id="reveal-key"></div>
           <div class="row tight" style="margin-top:0.9rem">
             <button class="ghost tiny" type="button" id="copy">Copy</button>
-            <button class="ghost tiny" type="button" id="tryit">Use in playground</button>
+            <button class="ghost tiny" type="button" id="tryit">Use it below</button>
           </div>
         </div>
 
@@ -125,48 +123,23 @@
       </div>
     </section>
 
-    <!-- ------------------------------------------------------- playground -->
-    <section class="section" id="play">
-      <h2>Try it</h2>
-      <p>A real call through the gateway, from this page. The meter is your own
-        allowance for that model — watch it dip as you use it, and refill.</p>
-
-      <div class="panel" style="margin-top:1.6rem">
-        <!-- Keys start of_live_. Not everything you can paste here does. -->
-        <label for="play-key">Your key</label>
-        <input id="play-key" placeholder="of_live_… or a code" autocomplete="off">
-        <p class="secret" style="margin:0.5rem 0 0">
-          This field takes more than keys. Codes go here too.
-        </p>
-        <p class="alert good" id="perk-note" hidden></p>
-
-        <label for="play-model">Model</label>
-        <select id="play-model"><option>loading…</option></select>
-
-        <div class="play-meter" id="play-meter" hidden>
-          <div class="label">
-            <span id="play-limit"></span><span id="play-left"></span>
-          </div>
-          <div class="gauge-bar"><div class="gauge-fill" id="play-fill"></div></div>
-        </div>
-
-        <label for="play-prompt">Prompt</label>
-        <textarea id="play-prompt" placeholder="Say hi in five words.">Say hi in five words.</textarea>
-
-        <div class="row" style="margin-top:1.1rem">
-          <button type="button" id="send">Send</button>
-          <button type="button" class="ghost" id="forget">Forget key</button>
-        </div>
-
-        <div class="reply" id="reply" hidden></div>
-      </div>
-    </section>
-
     <!-- ----------------------------------------------------------- models -->
     <section class="section" id="models">
       <h2>Models you can call</h2>
-      <p>Every limit below is yours alone. Paste a key above and these fill in
-        with your own remaining headroom.</p>
+      <p>Every limit below is yours alone. Paste a key to see your own
+        remaining headroom — or paste a code to redeem it.</p>
+
+      <div class="panel" style="margin-top:1.4rem">
+        <div class="row">
+          <input id="play-key" class="grow" placeholder="of_live_… or a code" autocomplete="off">
+          <button class="ghost" type="button" id="forget">Forget</button>
+        </div>
+        <p class="secret" style="margin:0.55rem 0 0">
+          Kept in this browser only. It's never sent anywhere except your own
+          gateway.
+        </p>
+        <p class="alert good" id="perk-note" hidden></p>
+      </div>
 
       <div class="rig" style="margin-top:1.6rem">
         <div class="rig-head">
@@ -196,8 +169,7 @@
 
 <footer>
   <span>OpenFlow</span>
-  <span><a href="index.html">Home</a>
-    <a href="chat.html">Chat</a></span>
+  <span><a href="index.html">Home</a></span>
   <span id="foot-endpoint">—</span>
 </footer>
 
@@ -469,7 +441,7 @@ document.getElementById("mint").addEventListener("click", async () => {
     document.getElementById("tryit").onclick = () => {
       document.getElementById("play-key").value = key;
       store.set("openflow.key", key);
-      document.getElementById("play").scrollIntoView({ block: "start" });
+      document.getElementById("models").scrollIntoView({ block: "start" });
       tick();
     };
 
@@ -561,7 +533,6 @@ const state = document.getElementById("rig-state");
 const stateText = document.getElementById("rig-state-text");
 const body = document.getElementById("rig-body");
 const sift = document.getElementById("sift");
-const picker = document.getElementById("play-model");
 
 let live = new Map();
 
@@ -602,18 +573,8 @@ function build() {
     body.appendChild(section);
   }
 
-  picker.innerHTML = "";
-  for (const m of MODELS) {
-    if (m.kind !== "chat") continue;   // video models answer elsewhere
-    const option = document.createElement("option");
-    option.value = m.id;
-    option.textContent = m.id + "  —  " + m.limit;
-    picker.appendChild(option);
-  }
-
   count();
   applySift();
-  refreshMeter();
 }
 
 function count(offline = 0) {
@@ -640,8 +601,6 @@ function paint() {
       gauge.dataset.state = "offline";
       limit.textContent = "offline";
       offline++;
-      const option = [...picker.options].find((o) => o.value === m.id);
-      if (option) option.disabled = true;
       continue;
     }
     if (row.limit === "unlimited" || !row.capacity) {
@@ -673,44 +632,7 @@ function applySift() {
 }
 
 sift.addEventListener("input", applySift);
-picker.addEventListener("change", refreshMeter);
 
-function refreshMeter() {
-  const box = document.getElementById("play-meter");
-  const listed = MODELS.find((m) => m.id === picker.value);
-  if (!listed) { box.hidden = true; return; }
-  box.hidden = false;
-
-  const fill = document.getElementById("play-fill");
-  const row = live.get(listed.id);
-  const label = document.getElementById("play-limit");
-  const left = document.getElementById("play-left");
-
-  if (listed.limit === "unlimited") {
-    label.textContent = "no limit on this one";
-    fill.style.width = "100%";
-    fill.style.background = "var(--flow)";
-    left.textContent = "";
-    return;
-  }
-
-  label.textContent = listed.limit + " — your own allowance";
-
-  if (!row || !row.capacity) {
-    fill.style.width = "100%";
-    fill.style.background = "var(--line)";
-    left.textContent = "paste a key to see yours";
-    return;
-  }
-  const share = Math.max(0, row.available / row.capacity);
-  fill.style.width = (share * 100).toFixed(1) + "%";
-  fill.style.background = share < 0.2 ? "var(--surge)" : "var(--flow)";
-  left.textContent = Math.floor(row.available) + " of " + row.capacity + " left";
-}
-
-/* With a key we ask /v1/me, which reports this account's own remaining
-   allowance. Without one we fall back to /v1/status, which is aggregate and
-   tells us only which models are actually being served. */
 async function tick() {
   if (CFG.liveCapacity === false) return;
 
@@ -727,14 +649,12 @@ async function tick() {
         stateText.textContent = "key not recognised";
         live = new Map();
         paint();
-        refreshMeter();
         return;
       }
       throw new Error(res.status);
     }
     live = new Map(((await res.json()).data || []).map((m) => [m.id, m]));
     paint();
-    refreshMeter();
     state.dataset.live = "yes";
     stateText.textContent = mine ? "your allowance, live" : "paste a key to see yours";
   } catch (err) {
@@ -862,93 +782,24 @@ document.getElementById("pick-save").addEventListener("click",
 document.getElementById("pick-clear").addEventListener("click",
   () => savePick(""));
 
-/* --------------------------------------------------------------- playground */
-
-const reply = document.getElementById("reply");
-const sendBtn = document.getElementById("send");
+document.getElementById("copy-base").addEventListener("click", () => {
+  navigator.clipboard.writeText(API + "/v1");
+});
 
 document.getElementById("forget").addEventListener("click", () => {
   store.del("openflow.key");
   document.getElementById("play-key").value = "";
 });
 
-document.getElementById("copy-base").addEventListener("click", () => {
-  navigator.clipboard.writeText(API + "/v1");
-});
-
-sendBtn.addEventListener("click", async () => {
-  const key = document.getElementById("play-key").value.trim();
-  const model = picker.value;
-  const prompt = document.getElementById("play-prompt").value.trim();
-
-  reply.hidden = false;
-  reply.dataset.state = "";
-
-  if (key && !key.startsWith("of_live_")) {
-    if (await tryCode(key)) { reply.hidden = true; return; }
+/* Anything pasted here is tried as a code first, then used to read your own
+   allowance. */
+document.getElementById("play-key").addEventListener("change", async (e) => {
+  const value = e.target.value.trim();
+  if (value && !value.startsWith("of_live_")) {
+    if (await tryCode(value)) return;
   }
-  if (!key) { reply.dataset.state = "error"; reply.textContent = "Paste a key first — generate one above if you don't have it."; return; }
-  if (!prompt) { reply.dataset.state = "error"; reply.textContent = "Write a prompt."; return; }
-
-  store.set("openflow.key", key);
-  sendBtn.disabled = true;
-  reply.textContent = "";
-  const caret = document.createElement("span");
-  caret.className = "caret";
-  reply.appendChild(caret);
-
-  try {
-    const res = await fetch(API + "/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model, stream: true, messages: [{ role: "user", content: prompt }],
-      }),
-    });
-
-    if (!res.ok) {
-      const detail = await res.json().catch(() => null);
-      reply.dataset.state = "error";
-      reply.textContent = detail?.error?.message || ("HTTP " + res.status);
-      tick();
-      return;
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "", text = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop();
-
-      for (const line of lines) {
-        if (!line.startsWith("data:")) continue;
-        const payload = line.slice(5).trim();
-        if (payload === "[DONE]") continue;
-        try {
-          const piece = JSON.parse(payload).choices?.[0]?.delta?.content;
-          if (piece) {
-            text += piece;
-            reply.textContent = text;
-            reply.appendChild(caret);
-          }
-        } catch (e) { /* partial frame, wait for the rest */ }
-      }
-    }
-
-    caret.remove();
-    if (!text) reply.textContent = "(empty response)";
-    tick();
-  } catch (err) {
-    reply.dataset.state = "error";
-    reply.textContent = "Couldn't reach the gateway: " + err.message;
-  } finally {
-    sendBtn.disabled = false;
-  }
+  if (value.startsWith("of_live_")) store.set("openflow.key", value);
+  tick();
 });
 
 /* ------------------------------------------------------------------- start */
